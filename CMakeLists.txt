@@ -38,11 +38,12 @@ find_path(STB_INCLUDE_DIRS "stb_c_lexer.h")
 find_package(fmt CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
+find_package(EnTT CONFIG REQUIRED)
 
 # Our App!
 add_executable(${PROJECT_NAME}
     src/main.cpp
-    )
+    src/core/Hijo.cpp src/core/Hijo.h src/common/common.h src/core/events/EventManager.h src/core/events/Event.h src/core/events/Events.h src/core/input/Input.cpp src/core/input/Input.h src/core/input/Keys.h src/core/input/InputActions.h src/core/input/Mapping.h src/core/layers/GameLayerStack.cpp src/core/layers/GameLayerStack.h src/core/layers/GameLayer.h src/layers/Sandbox.cpp src/layers/Sandbox.h)
 
 # Compile Options
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
@@ -64,15 +65,14 @@ configure_file("src/common/config.h.in" "src/common/config.h")
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_BINARY_DIR}/src/common
-    ${STB_INCLUDE_DIRS}
-    )
+    ${STB_INCLUDE_DIRS})
 
-  target_link_libraries(${PROJECT_NAME} PRIVATE
+target_link_libraries(${PROJECT_NAME} PRIVATE
     fmt::fmt
     raylib
     ZLIB::ZLIB
     spdlog::spdlog
-    )
+    EnTT::EnTT)
 
 if (APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE "-framework IOKit")
