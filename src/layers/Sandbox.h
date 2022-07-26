@@ -6,6 +6,8 @@
 #include "core/events/EventManager.h"
 #include "core/layers/GameLayer.h"
 
+#include "system/Gameboy.h"
+
 namespace hijo {
 
   class Sandbox : public GameLayer {
@@ -31,6 +33,8 @@ namespace hijo {
 
   private:
     Hijo &app = Hijo::Get();
+
+    Gameboy m_GB;
   };
 
 } // hijo
