@@ -2,12 +2,7 @@
 
 namespace hijo {
   SharpSM83::SharpSM83() {
-    regs.sp = 0xfffe;
-    regs.af = 0x01b0;
-    regs.bc = 0x0013;
-    regs.de = 0x00d8;
-    regs.hl = 0x014d;
-    regs.pc = 0;
+    Reset();
   }
 
   void SharpSM83::InitOpcodes() {
@@ -492,6 +487,7 @@ namespace hijo {
                                             return 0;
                                           },
                                       }},
+
         {0x2F, "CPL",          2, 8,  {
                                           [](SharpSM83 &cpu) {
                                             cpu.regs.a ^= 0xFF;
@@ -501,12 +497,172 @@ namespace hijo {
                                             return 0;
                                           },
                                       }},
+        {0x30, "JR NC, i8",    2, 12, {
+                                          [](SharpSM83 &cpu) {
+
+                                            if (cpu.Carry() == 0)
+                                              return -4;
+
+                                            int16_t offset = (int16_t) cpu.regs.pc + (int8_t) (cpu.latch & 0xFF);
+
+                                            cpu.regs.pc = (uint16_t) offset;
+
+                                            return 0;
+                                          },
+                                      }},
+        {0x31, "LD SP, u16",   3, 12, {
+                                          [](SharpSM83 &cpu) {
+                                            cpu.regs.sp = cpu.latch;
+                                            return 0;
+                                          }
+                                      }},
+        {0x32, "LD (HL-), A",  1, 8,  {
+                                          [](SharpSM83 &cpu) {
+                                            cpu.regs.a = cpu.bus->cpuRead(cpu.regs.hl--);
+                                            return 0;
+                                          }
+                                      }},
+        {0x33, "INC SP",       1, 8,  {
+                                          [](SharpSM83 &cpu) {
+                                            cpu.regs.sp++;
+                                            return 0;
+                                          }
+                                      }},
+        {0x34, "INC (HL)",     1, 12, {
+                                          [](SharpSM83 &cpu) {
+                                            uint16_t res = cpu.bus->cpuRead(cpu.regs.hl) + 1;
+
+                                            cpu.SetZero(res);
+                                            cpu.ClearNegative();
+                                            cpu.SetHalfCarry(res);
+
+                                            cpu.bus->cpuWrite(cpu.regs.hl, res & 0xFF);
+                                            return 0;
+                                          }
+                                      }},
+        {0x35, "DEC (HL)",     1, 12, {
+                                          [](SharpSM83 &cpu) {
+                                            uint16_t res = cpu.bus->cpuRead(cpu.regs.hl) - 1;
+
+                                            cpu.SetZero(res);
+                                            cpu.SetNegative();
+                                            cpu.SetHalfCarry(res);
+
+                                            cpu.bus->cpuWrite(cpu.regs.hl, res & 0xFF);
+                                            return 0;
+                                          }
+                                      }},
+        {0x36, "LD (HL), u8",  2, 12, {
+                                          [](SharpSM83 &cpu) {
+                                            cpu.bus->cpuWrite(cpu.regs.hl, cpu.latch & 0xFF);
+                                            return 0;
+                                          }
+                                      }},
+        {0x37, "SCF",          1, 4,  {
+                                          [](SharpSM83 &cpu) {
+                                            cpu.ClearNegative();
+                                            cpu.ClearHalfCarry();
+                                            cpu.SetCarry();
+                                            return 0;
+                                          }
+                                      }},
+        {0x38, "JR C, i8",     2, 12, {
+                                          [](SharpSM83 &cpu) {
+
+                                            if (cpu.Carry() != 0)
+                                              return -4;
+
+                                            int16_t offset = (int16_t) cpu.regs.pc + (int8_t) (cpu.latch & 0xFF);
+
+                                            cpu.regs.pc = (uint16_t) offset;
+
+                                            return 0;
+                                          },
+                                      }},
+        {0x39, "ADD HL, SP",   1, 8,  {
+                                          [](SharpSM83 &cpu) {
+                                            uint32_t res = cpu.regs.hl + cpu.regs.sp;
+
+                                            cpu.ClearNegative();
+                                            cpu.SetHalfCarry(res);
+                                            cpu.SetCarry(res);
+
+                                            cpu.regs.hl = (uint16_t) res & 0xFFFF;
+                                            return 0;
+                                          },
+                                      }},
+        {0x3A, "LD A, (HL-)",  1, 8,  {
+                                          [](SharpSM83 &cpu) {
+                                            cpu.regs.a = cpu.bus->cpuRead(cpu.regs.hl--);
+                                            return 0;
+                                          },
+                                      }},
+        {0x3B, "DEC SP",       1, 8,  {
+                                          [](SharpSM83 &cpu) {
+                                            cpu.regs.sp--;
+                                            return 0;
+                                          },
+                                      }},
+        {0x3C, "INC A",        1, 4,  {
+                                          [](SharpSM83 &cpu) {
+                                            uint16_t res = cpu.regs.a + 1;
+
+                                            cpu.SetZero(res);
+                                            cpu.ClearNegative();
+                                            cpu.SetHalfCarry(res);
+
+                                            cpu.regs.a = res & 0xFF;
+                                            return 0;
+                                          },
+                                      }},
+        {0x3D, "DEC A",        1, 4,  {
+                                          [](SharpSM83 &cpu) {
+                                            uint16_t res = cpu.regs.a - 1;
+
+                                            cpu.SetZero(res);
+                                            cpu.SetNegative();
+                                            cpu.SetHalfCarry(res);
+
+                                            cpu.regs.a = res & 0xFF;
+                                            return 0;
+                                          },
+                                      }},
+        {0x3E, "LD A, u8",     2, 8,  {
+                                          [](SharpSM83 &cpu) {
+                                            cpu.regs.a = cpu.latch & 0xFF;
+                                            return 0;
+                                          },
+                                      }},
+        {0x3F, "CCF",          1, 4,  {
+                                          [](SharpSM83 &cpu) {
+
+                                            cpu.ClearNegative();
+                                            cpu.ClearHalfCarry();
+
+                                            if (cpu.Carry() != 0) {
+                                              cpu.ClearCarry();
+                                            } else {
+                                              cpu.SetCarry();
+                                            }
+                                            
+                                            return 0;
+                                          },
+                                      }},
     };
   }
 
   void SharpSM83::ConnectBus(System *system) {
     bus = system;
 
+  }
+
+  void SharpSM83::Reset() {
+    regs.sp = 0xfffe;
+    regs.af = 0x01b0;
+    regs.bc = 0x0013;
+    regs.de = 0x00d8;
+    regs.hl = 0x014d;
+    regs.pc = 0;
   }
 
 } // hijo

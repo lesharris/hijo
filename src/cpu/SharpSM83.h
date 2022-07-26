@@ -16,6 +16,8 @@ namespace hijo {
 
     void ConnectBus(System *system);
 
+    void Reset();
+
   private:
     uint8_t bitmasks[8] = {
         0b00000001,
