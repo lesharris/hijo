@@ -3,6 +3,7 @@
 namespace hijo {
   SharpSM83::SharpSM83() {
     Reset();
+    //InitOpcodes();
   }
 
   void SharpSM83::InitOpcodes() {
@@ -1211,5 +1212,165 @@ namespace hijo {
 
     regs.pc = (uint16_t) res;
   }
+
+  void SharpSM83::ADC(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    ADC(*opPtr);
+  }
+
+  void SharpSM83::ADC(uint8_t data) {
+    int32_t diff = regs.a + data + Carry();
+
+    ClearNegative();
+    SetHalfCarry(diff);
+    SetZero(diff);
+    SetCarry(diff);
+
+    regs.a = static_cast<uint8_t>(diff);
+  }
+
+  void SharpSM83::SUB(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    SUB(*opPtr);
+  }
+
+  void SharpSM83::SUB(uint8_t data) {
+    int32_t diff = regs.a - data;
+
+    SetNegative();
+    SetHalfCarry(diff);
+    SetZero(diff);
+    SetCarry(diff);
+
+    regs.a = static_cast<uint8_t>(diff);
+  }
+
+  void SharpSM83::SBC(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    SBC(*opPtr);
+  }
+
+  void SharpSM83::SBC(uint8_t data) {
+    int32_t diff = regs.a - data - Carry();
+
+    SetNegative();
+    SetHalfCarry(diff);
+    SetZero(diff);
+    SetCarry(diff);
+
+    regs.a = static_cast<uint8_t>(diff);
+  }
+
+  void SharpSM83::AND(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    AND(*opPtr);
+  }
+
+  void SharpSM83::AND(uint8_t data) {
+    regs.a &= data;
+
+    ClearNegative();
+    ClearCarry();
+    SetHalfCarry();
+    SetZero(regs.a);
+  }
+
+  void SharpSM83::XOR(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    XOR(*opPtr);
+  }
+
+  void SharpSM83::XOR(uint8_t data) {
+    regs.a ^= data;
+
+    ClearNegative();
+    ClearHalfCarry();
+    ClearCarry();
+    SetZero(regs.a);
+  }
+
+  void SharpSM83::OR(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    OR(*opPtr);
+  }
+
+  void SharpSM83::OR(uint8_t data) {
+    regs.a |= data;
+
+    ClearNegative();
+    ClearHalfCarry();
+    ClearCarry();
+    SetZero(regs.a);
+  }
+
+  void SharpSM83::CP(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    CP(*opPtr);
+  }
+
+  void SharpSM83::CP(uint8_t data) {
+    int32_t diff = regs.a - data;
+    SetNegative();
+
+    if (!(diff & 0xFF)) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
+
+    if ((regs.a & 0xF) - (data & 0xF) < 0) {
+      SetHalfCarry();
+    } else {
+      ClearHalfCarry();
+    }
+
+    if (diff < 0)
+      SetCarry();
+    else
+      ClearCarry();
+  }
+
 
 } // hijo

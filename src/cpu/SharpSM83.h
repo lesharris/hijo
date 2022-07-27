@@ -292,6 +292,62 @@ namespace hijo {
 
     void BitMode(const Register & = Register::NONE) {}
 
+    ////////////////////////////////////
+    //              Opcode Handlers ////
+    ////////////////////////////////////
+  private:
+    void LD(Register r, uint8_t data);
+
+    void LD(Register r, uint16_t data);
+
+    void LD(uint16_t address, uint8_t data);
+
+    void LD(uint16_t address, uint16_t data);
+
+    void LD(Register target, Register operand);
+
+    void INC(Register r);
+
+    void INC(uint16_t address);
+
+    void DEC(Register r);
+
+    void DEC(uint16_t address);
+
+    void ADD(Register target, Register operand, bool isWide = false);
+
+    void ADD(uint8_t data);
+
+    void ADC(Register operand);
+
+    void ADC(uint8_t data);
+
+    void SUB(Register operand);
+
+    void SUB(uint8_t data);
+
+    void SBC(Register operand);
+
+    void SBC(uint8_t data);
+
+    void AND(Register operand);
+
+    void AND(uint8_t data);
+
+    void XOR(Register operand);
+
+    void XOR(uint8_t data);
+
+    void OR(Register operand);
+
+    void OR(uint8_t data);
+
+    void CP(Register operand);
+
+    void CP(uint8_t data);
+
+    void JR(int8_t offset);
+
     /////////////////////////////////////
     //    Addressing Mode Utilities ////
     ///////////////////////////////////
@@ -366,31 +422,6 @@ namespace hijo {
           return nullptr;
       }
     }
-
-  private:
-    void LD(Register r, uint8_t data);
-
-    void LD(Register r, uint16_t data);
-
-    void LD(uint16_t address, uint8_t data);
-
-    void LD(uint16_t address, uint16_t data);
-
-    void LD(Register target, Register operand);
-
-    void INC(Register r);
-
-    void INC(uint16_t address);
-
-    void DEC(Register r);
-
-    void DEC(uint16_t address);
-
-    void ADD(Register target, Register operand, bool isWide = false);
-
-    void ADD(uint8_t data);
-
-    void JR(int8_t offset);
 
     ////////////////
     //    State ////
