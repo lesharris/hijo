@@ -366,7 +366,7 @@ namespace hijo {
           return nullptr;
       }
     }
-    
+
   private:
     void LD(Register r, uint8_t data);
 
@@ -375,6 +375,8 @@ namespace hijo {
     void LD(uint16_t address, uint8_t data);
 
     void LD(uint16_t address, uint16_t data);
+
+    void LD(Register target, Register operand);
 
     void INC(Register r);
 
@@ -385,6 +387,10 @@ namespace hijo {
     void DEC(uint16_t address);
 
     void ADD(Register target, Register operand, bool isWide = false);
+
+    void ADD(uint8_t data);
+
+    void JR(int8_t offset);
 
     ////////////////
     //    State ////

@@ -188,12 +188,7 @@ namespace hijo {
         },
         {0x18, "JR i8",        AddressingMode::Relative,          2, 12,
             [this]() {
-              int16_t offset = (int16_t) regs.pc +
-                               (int8_t) (latch &
-                                         0xFF);
-
-              regs.pc = (uint16_t) offset;
-
+              JR(static_cast<int8_t>(latch & 0xFF));
               return 0;
             }
         },
@@ -265,12 +260,7 @@ namespace hijo {
               if (Zero() == 0)
                 return -4;
 
-              int16_t offset = (int16_t) regs.pc +
-                               (int8_t) (latch &
-                                         0xFF);
-
-              regs.pc = (uint16_t) offset;
-
+              JR(static_cast<int8_t>(latch & 0xFF));
               return 0;
             },
         },
@@ -350,16 +340,10 @@ namespace hijo {
         },
         {0x28, "JR Z, i8",     AddressingMode::Relative,          2, 12,
             [this]() {
-
               if (Zero() != 0)
                 return -4;
 
-              int16_t offset = (int16_t) regs.pc +
-                               (int8_t) (latch &
-                                         0xFF);
-
-              regs.pc = (uint16_t) offset;
-
+              JR(static_cast<int8_t>(latch & 0xFF));
               return 0;
             },
         },
@@ -411,16 +395,10 @@ namespace hijo {
         },
         {0x30, "JR NC, i8",    AddressingMode::Relative,          2, 12,
             [this]() {
-
               if (Carry())
                 return -4;
 
-              int16_t offset = (int16_t) regs.pc +
-                               (int8_t) (latch &
-                                         0xFF);
-
-              regs.pc = (uint16_t) offset;
-
+              JR(static_cast<int8_t>(latch & 0xFF));
               return 0;
             },
         },
@@ -476,12 +454,7 @@ namespace hijo {
               if (Carry() == 0)
                 return -4;
 
-              int16_t offset = (int16_t) regs.pc +
-                               (int8_t) (latch &
-                                         0xFF);
-
-              regs.pc = (uint16_t) offset;
-
+              JR(static_cast<int8_t>(latch & 0xFF));
               return 0;
             },
         },
@@ -524,7 +497,6 @@ namespace hijo {
         },
         {0x3F, "CCF",          AddressingMode::Implied,           1, 4,
             [this]() {
-
               ClearNegative();
               ClearHalfCarry();
 
@@ -534,6 +506,392 @@ namespace hijo {
                 SetCarry();
               }
 
+              return 0;
+            }
+        },
+        {0x40, "LD B, B",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::B, Register::B);
+              return 0;
+            }
+        },
+        {0x41, "LD B, C",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::B, Register::C);
+              return 0;
+            }
+        },
+        {0x42, "LD B, D",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::B, Register::D);
+              return 0;
+            }
+        },
+        {0x43, "LD B, E",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::B, Register::E);
+              return 0;
+            }
+        },
+        {0x44, "LD B, H",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::B, Register::H);
+              return 0;
+            }
+        },
+        {0x45, "LD B, L",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::B, Register::L);
+              return 0;
+            }
+        },
+        {0x46, "LD B, (HL)",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(Register::B, bus->cpuRead(regs.hl));
+              return 0;
+            }
+        },
+        {0x47, "LD B, A",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::B, Register::A);
+              return 0;
+            }
+        },
+        {0x48, "LD C, B",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::C, Register::B);
+              return 0;
+            }
+        },
+        {0x49, "LD C, C",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::C, Register::C);
+              return 0;
+            }
+        },
+        {0x4A, "LD C, D",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::C, Register::D);
+              return 0;
+            }
+        },
+        {0x4B, "LD C, E",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::C, Register::E);
+              return 0;
+            }
+        },
+        {0x4C, "LD C, H",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::C, Register::H);
+              return 0;
+            }
+        },
+        {0x4D, "LD C, L",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::C, Register::L);
+              return 0;
+            }
+        },
+        {0x4E, "LD C, (HL)",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(Register::C, bus->cpuRead(regs.hl));
+              return 0;
+            }
+        },
+        {0x4F, "LD C, A",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::C, Register::A);
+              return 0;
+            }
+        },
+        {0x50, "LD D, B",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::D, Register::B);
+              return 0;
+            }
+        },
+        {0x51, "LD D, C",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::D, Register::C);
+              return 0;
+            }
+        },
+        {0x52, "LD D, D",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::D, Register::D);
+              return 0;
+            }
+        },
+        {0x53, "LD D, E",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::D, Register::E);
+              return 0;
+            }
+        },
+        {0x54, "LD D, H",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::D, Register::H);
+              return 0;
+            }
+        },
+        {0x55, "LD D, L",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::D, Register::L);
+              return 0;
+            }
+        },
+        {0x56, "LD D, (HL)",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(Register::D, bus->cpuRead(regs.hl));
+              return 0;
+            }
+        },
+        {0x57, "LD D, A",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::D, Register::A);
+              return 0;
+            }
+        },
+        {0x58, "LD E, B",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::E, Register::B);
+              return 0;
+            }
+        },
+        {0x59, "LD E, C",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::E, Register::C);
+              return 0;
+            }
+        },
+        {0x5A, "LD E, D",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::E, Register::D);
+              return 0;
+            }
+        },
+        {0x5B, "LD E, E",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::E, Register::E);
+              return 0;
+            }
+        },
+        {0x5C, "LD E, H",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::E, Register::H);
+              return 0;
+            }
+        },
+        {0x5D, "LD E, L",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::E, Register::L);
+              return 0;
+            }
+        },
+        {0x5E, "LD E, (HL)",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(Register::E, bus->cpuRead(regs.hl));
+              return 0;
+            }
+        },
+        {0x5F, "LD E, A",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::E, Register::A);
+              return 0;
+            }
+        },
+        {0x60, "LD H, B",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::H, Register::B);
+              return 0;
+            }
+        },
+        {0x61, "LD H, C",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::H, Register::C);
+              return 0;
+            }
+        },
+        {0x62, "LD H, D",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::H, Register::D);
+              return 0;
+            }
+        },
+        {0x63, "LD H, E",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::H, Register::E);
+              return 0;
+            }
+        },
+        {0x64, "LD H, H",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::H, Register::H);
+              return 0;
+            }
+        },
+        {0x65, "LD H, L",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::H, Register::L);
+              return 0;
+            }
+        },
+        {0x66, "LD H, (HL)",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(Register::H, bus->cpuRead(regs.hl));
+              return 0;
+            }
+        },
+        {0x67, "LD H, A",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::H, Register::A);
+              return 0;
+            }
+        },
+        {0x68, "LD L, B",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::L, Register::B);
+              return 0;
+            }
+        },
+        {0x69, "LD L, C",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::L, Register::C);
+              return 0;
+            }
+        },
+        {0x6A, "LD L, D",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::L, Register::D);
+              return 0;
+            }
+        },
+        {0x6B, "LD L, E",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::L, Register::E);
+              return 0;
+            }
+        },
+        {0x6C, "LD L, H",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::L, Register::H);
+              return 0;
+            }
+        },
+        {0x6D, "LD L, L",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::L, Register::L);
+              return 0;
+            }
+        },
+        {0x6E, "LD L, (HL)",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(Register::L, bus->cpuRead(regs.hl));
+              return 0;
+            }
+        },
+        {0x6F, "LD L, A",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::L, Register::A);
+              return 0;
+            }
+        },
+        {
+         0x70, "LD (HL), B",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(latch, regs.b);
+              return 0;
+            }
+        },
+        {
+         0x71, "LD (HL), C",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(latch, regs.c);
+              return 0;
+            }
+        },
+        {0x72, "LD (HL), D",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(latch, regs.d);
+              return 0;
+            }
+        },
+        {0x73, "LD (HL), E",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(latch, regs.e);
+              return 0;
+            }
+        },
+        {0x74, "LD (HL), H",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(latch, regs.h);
+              return 0;
+            }
+        },
+        {0x75, "LD (HL), L",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(latch, regs.l);
+              return 0;
+            }
+        },
+        {0x76, "HALT",         AddressingMode::Implied,           1, 4,
+            [this]() {
+              m_Halted = true;
+              return 0;
+            }
+        },
+        {0x77, "LD (HL), A",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(latch, regs.a);
+              return 0;
+            }
+        },
+        {0x78, "LD A, B",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::A, Register::B);
+              return 0;
+            }
+        },
+        {0x79, "LD A, C",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::A, Register::C);
+              return 0;
+            }
+        },
+        {0x7A, "LD A, D",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::A, Register::D);
+              return 0;
+            }
+        },
+        {0x7B, "LD A, E",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::A, Register::E);
+              return 0;
+            }
+        },
+        {0x7C, "LD A, H",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::A, Register::H);
+              return 0;
+            }
+        },
+        {0x7D, "LD A, L",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::A, Register::L);
+              return 0;
+            }
+        },
+        {0x7E, "LD A, (HL)",   AddressingMode::RegisterIndirect,  1, 8,
+            [this]() {
+              LD(Register::A, bus->cpuRead(regs.hl));
+              return 0;
+            }
+        },
+        {0x7F, "LD A, A",      AddressingMode::Register,          1, 4,
+            [this]() {
+              LD(Register::A, Register::A);
               return 0;
             }
         }
@@ -661,6 +1019,18 @@ namespace hijo {
 
     LD(address, low);
     LD(address + 1, high);
+  }
+
+  void SharpSM83::LD(SharpSM83::Register target, SharpSM83::Register operand) {
+    auto targetPtr = RegToPointer(target);
+    auto opPtr = RegToPointer(operand);
+
+    if (!targetPtr || !opPtr) {
+      // Todo Handle this
+      return;
+    }
+
+    *targetPtr = *opPtr;
   }
 
   void SharpSM83::INC(SharpSM83::Register r) {
@@ -822,6 +1192,24 @@ namespace hijo {
 
       *targetPtr = static_cast<uint8_t>(res & 0xFF);
     }
+  }
+
+  void SharpSM83::ADD(uint8_t data) {
+    uint16_t res = regs.a + data;
+
+    SetZero(res);
+    ClearNegative();
+    SetHalfCarry(res);
+    SetCarry(res);
+
+    regs.a = static_cast<uint8_t>(res & 0xFF);
+  }
+
+  void SharpSM83::JR(int8_t offset) {
+    int16_t res = (int16_t) regs.pc +
+                  (int8_t) (offset & 0xFF);
+
+    regs.pc = (uint16_t) res;
   }
 
 } // hijo
