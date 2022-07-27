@@ -3,6 +3,7 @@
 namespace hijo {
   SharpSM83::SharpSM83() {
     Reset();
+    //InitCBOps();
     //InitOpcodes();
   }
 
@@ -1399,13 +1400,124 @@ namespace hijo {
               return 0;
             }
         },
-        {
-         0xCF, "RST 08h",      AddressingMode::Implied,            1, 16,
+        {0xCF, "RST 08h",      AddressingMode::Implied,            1, 16,
             [this]() {
               RST(0x8);
               return 0;
             }
-        }
+        },
+        {0xD0, "RET NC",       AddressingMode::Implied,            1, 20,
+            [this]() {
+              if (Zero() == 0)
+                return -12;
+
+              RET();
+              return 0;
+            }
+        },
+        {0xD1, "POP DE",       AddressingMode::Implied,            1, 12,
+            [this]() {
+              POP(Register::DE);
+              return 0;
+            }
+        },
+        {0xD2, "JP NC, u16",   AddressingMode::Extended,           3, 16,
+            [this]() {
+              if (Carry())
+                return -4;
+
+              JP(latch);
+              return 0;
+            }
+        },
+        {0xD3, "NOP",          AddressingMode::Implied,            1, 4,
+            [this]() {
+              return 0;
+            }
+        },
+        {0xD4, "CALL NC, u16", AddressingMode::Extended,           3, 24,
+            [this]() {
+              if (Carry())
+                return -12;
+
+              CALL(latch);
+              return 0;
+            }
+        },
+        {0xD5, "PUSH DE",      AddressingMode::Implied,            1, 16,
+            [this]() {
+              PUSH(Register::DE);
+              return 0;
+            }
+        },
+        {0xD6, "SUB A, u8",    AddressingMode::Immediate,          2, 8,
+            [this]() {
+              SUB(static_cast<uint8_t>(latch & 0xFF));
+              return 0;
+            }
+        },
+        {0xD7, "RST 10h",      AddressingMode::Implied,            1, 16,
+            [this]() {
+              RST(0x10);
+              return 0;
+            }
+        },
+        {0xD8, "RET C",        AddressingMode::Implied,            1, 20,
+            [this]() {
+              if (Carry() == 0)
+                return -12;
+
+              RET();
+              return 0;
+            }
+        },
+        {0xD9, "RETI",         AddressingMode::Implied,            1, 16,
+            [this]() {
+              m_InterruptsEnabled = true;
+              RET();
+              return 0;
+            }
+        },
+        {0xDA, "JP C, u16",    AddressingMode::Extended,           3, 16,
+            [this]() {
+              if (Carry() == 0)
+                return -4;
+
+              JP(latch);
+              return 0;
+            }
+        },
+        {0xDB, "NOP",          AddressingMode::Implied,            1, 4,
+            [this]() {
+              return 0;
+            }
+        },
+        {0xDC, "CALL C, u16",  AddressingMode::Implied,            3, 24,
+            [this]() {
+              if (Carry() == 0)
+                return -12;
+
+              CALL(latch);
+              return 0;
+            }
+        },
+        {0xDD, "NOP",          AddressingMode::Implied,            1, 4,
+            [this]() {
+              return 0;
+            }
+        },
+        {0xDE, "SBC A, u8",    AddressingMode::Immediate,          2, 8,
+            [this]() {
+              SBC(static_cast<uint8_t>(latch & 0xFF));
+              return 0;
+            }
+        },
+        {0xDF, "RST 18h",      AddressingMode::Implied,            1, 16,
+            [this]() {
+              RST(0x18);
+              return 0;
+            }
+        },
     };
   }
 
