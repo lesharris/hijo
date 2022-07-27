@@ -340,6 +340,8 @@ namespace hijo {
 
     void ADD(uint8_t data);
 
+    void ADD(Register target, uint8_t data);
+
     void ADC(Register operand);
 
     void ADC(uint8_t data);
