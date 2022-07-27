@@ -231,7 +231,7 @@ namespace hijo {
 
       latch = (uint16_t) ((high << 8) | low);
     }
-    
+
     void RegisterIndirectAF() {
       RegisterIndirectMode(Register::AF);
     }
@@ -281,7 +281,7 @@ namespace hijo {
         case 0x28:
         case 0x30:
         case 0x38:
-          latch = p & 0xFF;
+          latch = p;
           break;
 
         default:
@@ -352,6 +352,80 @@ namespace hijo {
     void CP(uint8_t data);
 
     void JR(int8_t offset);
+
+    void RET();
+
+    void POP(Register operand);
+
+    void PUSH(Register operand);
+
+    void CALL(uint16_t address);
+
+    void RST(uint16_t operand);
+
+    void RLC(Register operand);
+
+    void RLC(uint16_t address);
+
+    uint8_t RLC(uint8_t data);
+
+    void RRC(Register operand);
+
+    void RRC(uint16_t address);
+
+    uint8_t RRC(uint8_t data);
+
+    void RL(Register operand);
+
+    void RL(uint16_t address);
+
+    uint8_t RL(uint8_t data);
+
+    void RR(Register operand);
+
+    void RR(uint16_t address);
+
+    uint8_t RR(uint8_t data);
+
+    void SLA(Register operand);
+
+    void SLA(uint16_t address);
+
+    uint8_t SLA(uint8_t data);
+
+    void SRA(Register operand);
+
+    void SRA(uint16_t address);
+
+    uint8_t SRA(uint8_t data);
+
+    void SWAP(Register operand);
+
+    void SWAP(uint16_t address);
+
+    uint8_t SWAP(uint8_t data);
+
+    void SRL(Register operand);
+
+    void SRL(uint16_t address);
+
+    uint8_t SRL(uint8_t data);
+
+    void BIT(uint8_t bit, Register operand);
+
+    void BIT(uint8_t bit, uint8_t data);
+
+    void RES(uint8_t bit, Register operand);
+
+    void RES(uint8_t bit, uint16_t address);
+
+    uint8_t RES(uint8_t bit, uint8_t data);
+
+    void SET(uint8_t bit, Register operand);
+
+    void SET(uint8_t bit, uint16_t address);
+
+    uint8_t SET(uint8_t bit, uint8_t data);
 
     /////////////////////////////////////
     //    Addressing Mode Utilities ////

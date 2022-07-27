@@ -1280,6 +1280,14 @@ namespace hijo {
               return 0;
             }
         },
+        {0xC0, "RET NZ",       AddressingMode::Implied,            1, 20,
+            [this]() {
+              if (Zero() == 0)
+                return -12;
+              RET();
+              return 0;
+            }
+        }
     };
   }
 
@@ -1756,5 +1764,380 @@ namespace hijo {
       ClearCarry();
   }
 
+  void SharpSM83::RET() {
+    regs.pc = regs.sp;
+    regs.sp += 2;
+  }
+
+  void SharpSM83::POP(SharpSM83::Register operand) {
+    auto targetPtr = WideRegToPointer(operand);
+
+    if (!targetPtr) {
+      // todo handle
+      return;
+    }
+
+    // BC -> C, B
+    // C = low, B = high
+
+    auto low = bus->cpuRead(regs.sp++);
+    auto high = bus->cpuRead(regs.sp++);
+
+    *targetPtr = (low << 8) | high;
+  }
+
+  void SharpSM83::PUSH(SharpSM83::Register operand) {
+    auto targetPtr = WideRegToPointer(operand);
+
+    if (!targetPtr) {
+      // todo handle
+      return;
+    }
+
+    uint8_t low = (*targetPtr & 0xFF00) >> 8;
+    uint8_t high = *targetPtr & 0xFF;
+
+    bus->cpuWrite(--regs.sp, high);
+    bus->cpuWrite(--regs.sp, low);
+  }
+
+  void SharpSM83::CALL(uint16_t address) {
+    uint8_t low = (regs.pc & 0xFF00) >> 8;
+    uint8_t high = regs.pc & 0xFF;
+
+    bus->cpuWrite(--regs.sp, high);
+    bus->cpuWrite(--regs.sp, low);
+
+    regs.pc = address;
+  }
+
+  void SharpSM83::RST(uint16_t operand) {
+    uint8_t low = (regs.pc & 0xFF00) >> 8;
+    uint8_t high = regs.pc & 0xFF;
+
+    bus->cpuWrite(--regs.sp, high);
+    bus->cpuWrite(--regs.sp, low);
+
+    regs.pc = operand;
+  }
+
+  void SharpSM83::RLC(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    *opPtr = RLC(*opPtr);
+  }
+
+  void SharpSM83::RLC(uint16_t address) {
+    uint8_t data = bus->cpuRead(address);
+    bus->cpuWrite(address, RLC(data));
+  }
+
+  uint8_t SharpSM83::RLC(uint8_t data) {
+    uint8_t res = (data << 1) | (data >> 7);
+
+    ClearNegative();
+    ClearHalfCarry();
+    SetZero(res);
+    if (res & 1) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
+
+    return res;
+  }
+
+  void SharpSM83::RRC(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    *opPtr = RRC(*opPtr);
+  }
+
+
+  void SharpSM83::RRC(uint16_t address) {
+    uint8_t data = bus->cpuRead(address);
+    bus->cpuWrite(address, RRC(data));
+  }
+
+  uint8_t SharpSM83::RRC(uint8_t data) {
+    uint8_t low = data & 1;
+    uint8_t res = (data >> 1) | (data << 7);
+
+    ClearNegative();
+    ClearHalfCarry();
+    SetZero(res);
+
+    if (low) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
+
+    return res;
+  }
+
+  void SharpSM83::RL(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    *opPtr = RL(*opPtr);
+  }
+
+  void SharpSM83::RL(uint16_t address) {
+    uint8_t data = bus->cpuRead(address);
+    bus->cpuWrite(address, RL(data));
+  }
+
+  uint8_t SharpSM83::RL(uint8_t data) {
+    uint32_t wide = (data << 1) | Carry();
+    uint8_t carry = static_cast<uint8_t>(wide >> 8);
+
+    ClearNegative();
+    ClearHalfCarry();
+    SetZero(static_cast<uint8_t>(wide));
+
+    if (carry) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
+
+    return static_cast<uint8_t>(wide);
+  }
+
+  void SharpSM83::RR(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    *opPtr = RR(*opPtr);
+  }
+
+  void SharpSM83::RR(uint16_t address) {
+    uint8_t data = bus->cpuRead(address);
+    bus->cpuWrite(address, RR(data));
+  }
+
+  uint8_t SharpSM83::RR(uint8_t data) {
+    uint8_t low = data & 1;
+    uint8_t res = (data >> 1) | (Carry() << 7);
+
+    ClearNegative();
+    ClearHalfCarry();
+    SetZero(res);
+
+    if (low) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
+
+    return res;
+  }
+
+  void SharpSM83::SLA(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    *opPtr = SLA(*opPtr);
+  }
+
+  void SharpSM83::SLA(uint16_t address) {
+    uint8_t data = bus->cpuRead(address);
+    bus->cpuWrite(address, SLA(data));
+  }
+
+  uint8_t SharpSM83::SLA(uint8_t data) {
+    ClearNegative();
+    ClearHalfCarry();
+    SetZero(data << 1);
+
+    if (data >> 7) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
+
+    return data << 1;
+  }
+
+  void SharpSM83::SRA(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    *opPtr = SRA(*opPtr);
+  }
+
+  void SharpSM83::SRA(uint16_t address) {
+    uint8_t data = bus->cpuRead(address);
+    bus->cpuWrite(address, SRA(data));
+  }
+
+  uint8_t SharpSM83::SRA(uint8_t data) {
+    ClearNegative();
+    ClearHalfCarry();
+    SetZero(((int8_t) data) >> 1);
+
+    if (data & 1) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
+
+    return ((int8_t) data) >> 1;
+  }
+
+  void SharpSM83::SWAP(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    *opPtr = SWAP(*opPtr);
+  }
+
+  void SharpSM83::SWAP(uint16_t address) {
+    uint8_t data = bus->cpuRead(address);
+    bus->cpuWrite(address, SWAP(data));
+  }
+
+  uint8_t SharpSM83::SWAP(uint8_t data) {
+    ClearNegative();
+    ClearHalfCarry();
+    SetZero((data << 4) | (data >> 4));
+    ClearCarry();
+
+    return (data << 4) | (data >> 4);
+  }
+
+  void SharpSM83::SRL(SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    *opPtr = SRL(*opPtr);
+  }
+
+  void SharpSM83::SRL(uint16_t address) {
+    uint8_t data = bus->cpuRead(address);
+    bus->cpuWrite(address, SRL(data));
+  }
+
+  uint8_t SharpSM83::SRL(uint8_t data) {
+    ClearNegative();
+    ClearHalfCarry();
+    SetZero(data >> 1);
+    if (data & 1) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
+
+    return data >> 1;
+  }
+
+  void SharpSM83::BIT(uint8_t bit, SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    BIT(bit, *opPtr);
+  }
+
+  void SharpSM83::BIT(uint8_t bit, uint8_t data) {
+    auto mask = bitmasks[bit];
+
+    ClearNegative();
+    SetHalfCarry();
+
+    if ((data & mask) == 0)
+      SetZero();
+    else
+      ClearZero();
+
+  }
+
+  void SharpSM83::RES(uint8_t bit, SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    auto res = RES(bit, *opPtr);
+
+    *opPtr = res;
+  }
+
+  void SharpSM83::RES(uint8_t bit, uint16_t address) {
+    uint8_t data = bus->cpuRead(address);
+    auto res = RES(bit, data);
+    bus->cpuWrite(address, res);
+  }
+
+  uint8_t SharpSM83::RES(uint8_t bit, uint8_t data) {
+    auto mask = bitmasks[bit];
+
+    return data & ~mask;
+  }
+
+  void SharpSM83::SET(uint8_t bit, SharpSM83::Register operand) {
+    auto opPtr = RegToPointer(operand);
+
+    if (!opPtr) {
+      // todo handle this
+      return;
+    }
+
+    auto res = SET(bit, *opPtr);
+
+    *opPtr = res;
+  }
+
+  void SharpSM83::SET(uint8_t bit, uint16_t address) {
+    uint8_t data = bus->cpuRead(address);
+    auto res = SET(bit, data);
+    bus->cpuWrite(address, res);
+  }
+
+  uint8_t SharpSM83::SET(uint8_t bit, uint8_t data) {
+    auto mask = bitmasks[bit];
+
+    return data | mask;
+  }
 
 } // hijo
