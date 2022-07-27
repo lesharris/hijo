@@ -39,7 +39,10 @@ namespace hijo {
       Immediate,
       ExtendedImmediate,
       Register,
-      RegisterIndirect,
+      RegisterIndirectAF,
+      RegisterIndirectBC,
+      RegisterIndirectDE,
+      RegisterIndirectHL,
       Extended,
       ModifiedPageZero,
       Relative,
@@ -214,45 +217,47 @@ namespace hijo {
     //    Addressing Modes ////
     //////////////////////////
   private:
-    void ImpliedMode(const Register & = Register::NONE) {}
+    void ImpliedMode() {}
 
-    void RegisterMode(const Register & = Register::NONE) {}
+    void RegisterMode() {}
 
-    void ImmediateMode(const Register & = Register::NONE) {
+    void ImmediateMode() {
       latch = bus->cpuRead(regs.pc + 1) & 0xFF;
     }
 
-    void ExtendedImmediateMode(const Register & = Register::NONE) {
+    void ExtendedImmediateMode() {
       uint8_t low = bus->cpuRead(regs.pc + 1);
       uint8_t high = bus->cpuRead(regs.pc + 2);
 
       latch = (uint16_t) ((high << 8) | low);
     }
+    
+    void RegisterIndirectAF() {
+      RegisterIndirectMode(Register::AF);
+    }
+
+    void RegisterIndirectBC() {
+      RegisterIndirectMode(Register::BC);
+    }
+
+    void RegisterIndirectDE() {
+      RegisterIndirectMode(Register::DE);
+    }
+
+    void RegisterIndirectHL() {
+      RegisterIndirectMode(Register::HL);
+    }
 
     void RegisterIndirectMode(const Register &r) {
-      uint16_t rvalue = 0;
+      uint16_t rvalue;
 
-      switch (r) {
-        case Register::AF:
-          rvalue = regs.af;
-          break;
+      auto rPtr = WideRegToPointer(r);
 
-        case Register::BC:
-          rvalue = regs.bc;
-          break;
-
-        case Register::DE:
-          rvalue = regs.de;
-          break;
-
-        case Register::HL:
-          rvalue = regs.hl;
-          break;
-
-        default:
-          // Todo: Handle invalid
-          break;
+      if (!rPtr) {
+        return;
       }
+
+      rvalue = *rPtr;
 
       uint8_t low = rvalue & 0xFF;
       uint8_t high = (rvalue & 0xFF00) >> 8;
@@ -260,11 +265,11 @@ namespace hijo {
       latch = (uint16_t) ((high << 8) | low);
     }
 
-    void ExtendedMode(const Register & = Register::NONE) {
+    void ExtendedMode() {
       ExtendedImmediateMode();
     }
 
-    void ModifiedPageZeroMode(const Register & = Register::NONE) {
+    void ModifiedPageZeroMode() {
       uint8_t p = bus->cpuRead(regs.pc + 1);
 
       switch (p) {
@@ -286,11 +291,11 @@ namespace hijo {
       }
     }
 
-    void RelativeMode(const Register & = Register::NONE) {
+    void RelativeMode() {
       ImmediateMode();
     }
 
-    void BitMode(const Register & = Register::NONE) {}
+    void BitMode() {}
 
     ////////////////////////////////////
     //              Opcode Handlers ////
@@ -353,24 +358,26 @@ namespace hijo {
     ///////////////////////////////////
 
   private:
-    typedef void (SharpSM83::*AddressingModeFunc)(const Register &);
+    typedef void (SharpSM83::*AddressingModeFunc)();
 
-    AddressingModeFunc modes[9] = {
+    AddressingModeFunc modes[12] = {
         &SharpSM83::ImpliedMode,
         &SharpSM83::ImmediateMode,
         &SharpSM83::ExtendedImmediateMode,
         &SharpSM83::RegisterMode,
-        &SharpSM83::RegisterIndirectMode,
+        &SharpSM83::RegisterIndirectAF,
+        &SharpSM83::RegisterIndirectBC,
+        &SharpSM83::RegisterIndirectDE,
+        &SharpSM83::RegisterIndirectHL,
         &SharpSM83::ExtendedMode,
         &SharpSM83::ModifiedPageZeroMode,
         &SharpSM83::RelativeMode,
         &SharpSM83::BitMode
     };
 
-    void AddressingModeExec(AddressingMode modeType,
-                            const Register &r = Register::NONE) {
+    void AddressingModeExec(AddressingMode modeType) {
       // lol
-      (this->*modes[static_cast<size_t>(modeType)])(r);
+      (this->*modes[static_cast<size_t>(modeType)])();
     }
 
     /////////////////////////
