@@ -128,6 +128,23 @@ namespace hijo {
             exec(exec) {}
     };
 
+    struct CBOp {
+      uint8_t value = 0;
+      std::string label = "";
+      uint32_t tcycles = 0;
+      uint32_t mcycles = 0;
+      std::function<int8_t()> exec{};
+
+      CBOp(uint8_t value,
+           const std::string &label,
+           uint32_t tcycles,
+           const std::function<int8_t()> &exec)
+          : value(value),
+            label(label),
+            tcycles(tcycles),
+            mcycles(tcycles / 4),
+            exec(exec) {}
+    };
     /////////////////////////
     //    Flag Handling ////
     ///////////////////////
@@ -353,6 +370,8 @@ namespace hijo {
 
     void JR(int8_t offset);
 
+    void JP(uint16_t address);
+
     void RET();
 
     void POP(Register operand);
@@ -461,6 +480,8 @@ namespace hijo {
   private:
     void InitOpcodes();
 
+    void InitCBOps();
+
     uint16_t *WideRegToPointer(Register r) {
       switch (r) {
         case Register::AF:
@@ -516,6 +537,7 @@ namespace hijo {
     uint16_t latch;
 
     std::vector<Opcode> m_Opcodes{};
+    std::vector<CBOp> m_CBOps{};
 
     System *bus = nullptr;
 

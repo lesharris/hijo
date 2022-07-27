@@ -6,6 +6,17 @@ namespace hijo {
     //InitOpcodes();
   }
 
+  void SharpSM83::InitCBOps() {
+    m_CBOps = {
+        {0x0, "RLC B", 8,
+         [this]() {
+           RLC(Register::B);
+           return -8;
+         }
+        }
+    };
+  }
+
   void SharpSM83::InitOpcodes() {
     m_Opcodes = {
         {0x0,  "NOP",          AddressingMode::Implied,            1, 4,
@@ -1287,6 +1298,113 @@ namespace hijo {
               RET();
               return 0;
             }
+        },
+        {0xC1, "POP BC",       AddressingMode::Implied,            1, 12,
+            [this]() {
+              POP(Register::BC);
+              return 0;
+            }
+        },
+        {0xC2, "JP NZ, u16",   AddressingMode::Extended,           3, 16,
+            [this]() {
+              if (Zero() == 0)
+                return -4;
+
+              JP(latch);
+              return 0;
+            }
+        },
+        {0xC3, "JP u16",       AddressingMode::Extended,           3, 16,
+            [this]() {
+              JP(latch);
+              return 0;
+            }
+        },
+        {0xC4, "CALL NZ, u16", AddressingMode::Extended,           3, 24,
+            [this]() {
+              if (Zero() == 0)
+                return -12;
+
+              CALL(latch);
+              return 0;
+            }
+        },
+        {0xC5, "PUSH BC",      AddressingMode::Implied,            1, 16,
+            [this]() {
+              PUSH(Register::BC);
+              return 0;
+            }
+        },
+        {0xC6, "ADD A, u8",    AddressingMode::Immediate,          2, 8,
+            [this]() {
+              ADD(static_cast<uint8_t>(latch & 0xFF));
+              return 0;
+            }
+        },
+        {0xC7, "RST 00h",      AddressingMode::Implied,            1, 16,
+            [this]() {
+              RST(0);
+              return 0;
+            }
+        },
+        {0xC8, "RET Z",        AddressingMode::Implied,            1, 20,
+            [this]() {
+              if (Zero() != 0)
+                return -12;
+              RET();
+              return 0;
+            }
+        },
+        {0xC9, "RET",          AddressingMode::Implied,            1, 16,
+            [this]() {
+              RET();
+              return 0;
+            }
+        },
+        {0xCA, "JP Z, u16",    AddressingMode::Extended,           3, 16,
+            [this]() {
+              if (Zero() != 0)
+                return -4;
+
+              JP(latch);
+              return 0;
+            }
+        },
+        {0xCB, "PREFIX CB",    AddressingMode::Immediate,          2, 16,
+            [this]() {
+              size_t index = latch & 0xFF;
+              auto &op = m_CBOps[index];
+
+              return op.exec();
+            }
+        },
+        {0xCC, "CALL Z, u16",  AddressingMode::Extended,           3, 24,
+            [this]() {
+              if (Zero() != 0)
+                return -12;
+
+              CALL(latch);
+              return 0;
+            }
+        },
+        {0xCD, "CALL u16",     AddressingMode::Extended,           3, 24,
+            [this]() {
+              CALL(latch);
+              return 0;
+            }
+        },
+        {0xCE, "ADC A, u8",    AddressingMode::Immediate,          2, 8,
+            [this]() {
+              ADC(static_cast<uint8_t>(latch & 0xFF));
+              return 0;
+            }
+        },
+        {
+         0xCF, "RST 08h",      AddressingMode::Implied,            1, 16,
+            [this]() {
+              RST(0x8);
+              return 0;
+            }
         }
     };
   }
@@ -2138,6 +2256,10 @@ namespace hijo {
     auto mask = bitmasks[bit];
 
     return data | mask;
+  }
+
+  void SharpSM83::JP(uint16_t address) {
+    regs.pc = address;
   }
 
 } // hijo
