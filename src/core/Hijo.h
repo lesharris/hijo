@@ -61,6 +61,7 @@ namespace hijo {
     Vector2 m_WorldCoords{};
 
     Camera2D m_Camera{};
+    RenderTexture m_RenderTexture;
   };
 
 } // hijo

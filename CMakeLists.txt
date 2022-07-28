@@ -63,7 +63,15 @@ add_executable(${PROJECT_NAME}
     src/cpu/SharpSM83.h
     src/system/Gameboy.cpp
     src/system/Gameboy.h
-    src/system/System.h src/cpu/SharpSM83Opcodes.cpp)
+    src/system/System.h
+    src/external/imgui_extra/imgui_impl_glfw.cpp
+    src/external/imgui/backends/imgui_impl_opengl3.cpp
+    src/external/imgui/imgui_demo.cpp
+    src/external/imgui/imgui_draw.cpp
+    src/external/imgui/imgui_tables.cpp
+    src/external/imgui/imgui_widgets.cpp
+    src/external/imgui/imgui.cpp src/layers/UI.cpp src/layers/UI.h
+    src/cpu/SharpSM83Opcodes.cpp)
 
 # Compile Options
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
@@ -85,7 +93,10 @@ configure_file("src/common/config.h.in" "src/common/config.h")
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${PROJECT_SOURCE_DIR}/src
     ${PROJECT_BINARY_DIR}/src/common
-    ${STB_INCLUDE_DIRS})
+    ${STB_INCLUDE_DIRS}
+    ${PROJECT_SOURCE_DIR}/src/external
+    ${PROJECT_SOURCE_DIR}/src/external/imgui
+    ${PROJECT_SOURCE_DIR}/src/external/imgui/backends)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     fmt::fmt

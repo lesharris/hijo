@@ -23,7 +23,7 @@ namespace hijo {
   void Gameboy::Update(double) {
     m_Cpu.Cycle(32);
     const auto &regs = m_Cpu.GetRegisters();
-    spdlog::get("console")->info("{}", regs.a);
+    //spdlog::get("console")->info("{}", regs.a);
   }
 
 } // hijo
