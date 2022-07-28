@@ -63,7 +63,7 @@ add_executable(${PROJECT_NAME}
     src/cpu/SharpSM83.h
     src/system/Gameboy.cpp
     src/system/Gameboy.h
-    src/system/System.h)
+    src/system/System.h src/cpu/SharpSM83Opcodes.cpp)
 
 # Compile Options
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
