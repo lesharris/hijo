@@ -398,7 +398,7 @@ namespace hijo {
             },
         },
 
-        {0x2F, "CPL",               AddressingMode::Implied,            2, 8,
+        {0x2F, "CPL",               AddressingMode::Implied,            1, 4,
             [this]() {
               regs.a ^= 0xFF;
               SetHalfCarry();
@@ -1530,7 +1530,7 @@ namespace hijo {
               return 0;
             }
         },
-        {0xE2, "LD (FF00 + C), A",  AddressingMode::Immediate,          1, 8,
+        {0xE2, "LD (FF00 + C), A",  AddressingMode::Implied,            1, 8,
             [this]() {
               LD(0xFF00 | regs.c, regs.a);
               return 0;
@@ -1606,6 +1606,107 @@ namespace hijo {
         {0xEF, "RST 28h",           AddressingMode::Implied,            1, 16,
             [this]() {
               RST(0x28);
+              return 0;
+            }
+        },
+        {0xF0, "LD A, (FF00 + u8)", AddressingMode::Immediate,          2, 12,
+            [this]() {
+              LD(Register::A, bus->cpuRead(0xFF00 | static_cast<uint8_t>(latch & 0xFF)));
+              return 0;
+            }
+        },
+        {0xF1, "POP AF",            AddressingMode::Implied,            1, 12,
+            [this]() {
+              POP(Register::AF);
+              return 0;
+            }
+        },
+        {0xF2, "LD A, (FF00 + C)",  AddressingMode::Implied,            1, 8,
+            [this]() {
+              LD(Register::A, bus->cpuRead(0xFF00 | regs.c));
+              return 0;
+            }
+        },
+        {0xF3, "DI",                AddressingMode::Implied,            1, 4,
+            [this]() {
+              m_InterruptsEnabled = false;
+              return 0;
+            }
+        },
+        {0xF4, "NOP",               AddressingMode::Implied,            1, 4,
+            [this]() {
+              return 0;
+            }
+        },
+        {0xF5, "PUSH AF",           AddressingMode::Implied,            1, 16,
+            [this]() {
+              PUSH(Register::AF);
+              return 0;
+            }
+        },
+        {0xF6, "OR A, u8",          AddressingMode::Immediate,          2, 8,
+            [this]() {
+              OR(static_cast<uint8_t>(latch & 0xFF));
+              return 0;
+            }
+        },
+        {0xF7, "RST 30h",           AddressingMode::Implied,            1, 16,
+            [this]() {
+              RST(0x30);
+              return 0;
+            }
+        },
+        {0xF8, "LD HL, SP + i8",    AddressingMode::Immediate,          2, 12,
+            [this]() {
+              int32_t offset = regs.sp + static_cast<int8_t>(latch & 0xFF);
+
+              LD(Register::HL, static_cast<uint16_t>(offset));
+
+              ClearZero();
+              ClearNegative();
+              SetHalfCarry(regs.hl);
+              SetCarry(regs.hl);
+
+              return 0;
+            }
+        },
+        {0xF9, "LD SP, HL",         AddressingMode::Implied,            1, 8,
+            [this]() {
+              regs.sp = regs.hl;
+              return 0;
+            }
+        },
+        {0xFA, "LD A, (u16)",       AddressingMode::Extended,           3, 16,
+            [this]() {
+              LD(Register::A, bus->cpuRead(latch));
+              return 0;
+            }
+        },
+        {0xFB, "EI",                AddressingMode::Implied,            1, 4,
+            [this]() {
+              m_InterruptsEnabled = true;
+              return 0;
+            }
+        },
+        {0xFC, "NOP",               AddressingMode::Implied,            1, 4,
+            [this]() {
+              return 0;
+            }
+        },
+        {0xFD, "NOP",               AddressingMode::Implied,            1, 4,
+            [this]() {
+              return 0;
+            }
+        },
+        {0xFE, "CP A, u8",          AddressingMode::Immediate,          2, 8,
+            [this]() {
+              CP(latch & 0xFF);
+              return 0;
+            }
+        },
+        {0xFF, "RST 38h",           AddressingMode::Implied,            1, 16,
+            [this]() {
+              RST(0x38);
               return 0;
             }
         },
