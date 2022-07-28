@@ -11,18 +11,10 @@
 namespace hijo {
 
   class SharpSM83 {
+    /*
+   * Types
+   */
   public:
-    SharpSM83();
-
-    void ConnectBus(System *system);
-
-    void Reset();
-
-    /////////////////
-    //     Types ////
-    /////////////////
-
-  private:
     uint8_t bitmasks[8] = {
         0b00000001,
         0b00000010,
@@ -140,10 +132,45 @@ namespace hijo {
             label(label),
             exec(exec) {}
     };
-    /////////////////////////
-    //    Flag Handling ////
-    ///////////////////////
 
+  public:
+    SharpSM83();
+
+    /* Execution */
+    void Cycle(uint32_t cycles);
+
+    uint8_t Step();
+
+    /*
+     * Public Utility
+     */
+    void ConnectBus(System *system);
+
+    void Reset();
+
+    void Stop(bool isStopped) {
+      m_Stopped = isStopped;
+    }
+
+    bool Stop() const {
+      return m_Stopped;
+    }
+
+    void Halted(bool isHalted) {
+      m_Halted = isHalted;
+    }
+
+    bool Hated() const {
+      return m_Halted;
+    }
+
+    const Registers &GetRegisters() const {
+      return regs;
+    }
+
+    /*
+     * Flag Handling
+     */
   private:
     void SetCarry(uint16_t sum) {
       if ((sum >> 8) != 0) {
@@ -225,9 +252,9 @@ namespace hijo {
       regs.f &= ~bitmasks[7];
     }
 
-    ////////////////////////////
-    //    Addressing Modes ////
-    //////////////////////////
+    /*
+     * Addressing Modes
+     */
   private:
     void ImpliedMode() {}
 
@@ -309,9 +336,10 @@ namespace hijo {
 
     void BitMode() {}
 
-    ////////////////////////////////////
-    //              Opcode Handlers ////
-    ////////////////////////////////////
+    /*
+     * Opcode Handlers
+     */
+
   private:
     void LD(Register r, uint8_t data);
 
@@ -443,9 +471,9 @@ namespace hijo {
 
     uint8_t SET(uint8_t bit, uint8_t data);
 
-    /////////////////////////////////////
-    //    Addressing Mode Utilities ////
-    ///////////////////////////////////
+    /*
+     * Internal Addressing Mode Utilities
+     */
 
   private:
     typedef void (SharpSM83::*AddressingModeFunc)();
@@ -470,10 +498,9 @@ namespace hijo {
       (this->*modes[static_cast<size_t>(modeType)])();
     }
 
-    /////////////////////////
-    //    Misc Internal ////
-    ///////////////////////
-
+    /*
+     * Misc Internal
+     */
   private:
     void InitOpcodes();
 
@@ -522,21 +549,22 @@ namespace hijo {
       }
     }
 
-    ////////////////
-    //    State ////
-    ////////////////
-
+    /*
+     * State
+     */
   private:
     Registers regs;
-    uint8_t m_Cycle = 1;
-
-    uint8_t m_CurrentOpcode;
     uint16_t latch;
+    System *bus = nullptr;
+
+    uint32_t m_Cycles = 0;
+    uint32_t m_CurrentCycleCount = 0;
+    uint32_t m_CycleDelta = 0;
+
+    Opcode *m_CurrentOpcode = nullptr;
 
     std::vector<Opcode> m_Opcodes{};
     std::vector<CBOp> m_CBOps{};
-
-    System *bus = nullptr;
 
     bool m_Stopped = false;
     bool m_InterruptsEnabled = true;

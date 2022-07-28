@@ -14,10 +14,12 @@ namespace hijo {
 
     uint8_t cpuRead(uint16_t addr, bool readOnly = false) override;
 
+    void Update(double timestep) override;
+
   private:
     uint8_t m_Ram[2048]; // temp
     SharpSM83 m_Cpu;
-    uint64_t m_CycleCount = 0;
+    // uint64_t m_CycleCount = 0;
   };
 
 } // hijo

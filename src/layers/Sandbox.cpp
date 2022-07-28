@@ -21,8 +21,8 @@ namespace hijo {
     EventManager::Get().DetachAll(this);
   }
 
-  void Sandbox::Update(double) {
-
+  void Sandbox::Update(double timestep) {
+    m_GB.Update(timestep);
   }
 
   void Sandbox::Render() {
