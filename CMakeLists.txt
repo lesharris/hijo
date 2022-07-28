@@ -70,7 +70,8 @@ add_executable(${PROJECT_NAME}
     src/external/imgui/imgui_draw.cpp
     src/external/imgui/imgui_tables.cpp
     src/external/imgui/imgui_widgets.cpp
-    src/external/imgui/imgui.cpp src/layers/UI.cpp src/layers/UI.h)
+    src/external/imgui/imgui.cpp src/layers/UI.cpp src/layers/UI.h
+    src/cpu/SharpSM83Opcodes.cpp)
 
 # Compile Options
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
