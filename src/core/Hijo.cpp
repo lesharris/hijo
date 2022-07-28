@@ -5,11 +5,14 @@
 #include "events/Events.h"
 
 #include "Hijo.h"
+
 #include "layers/Sandbox.h"
+#include "layers/UI.h"
 
 namespace hijo {
   void Hijo::Run() {
     m_GameLayers->PushState(CreateRef<Sandbox>());
+    m_GameLayers->PushOverlay(CreateRef<UI>());
 
     double lastTime = GetTime();
 
