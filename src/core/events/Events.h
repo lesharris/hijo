@@ -102,10 +102,10 @@ namespace hijo::Events {
     float y;
   };
 
-  struct DebugMouseMove : public Event {
-    DebugMouseMove(Vector2 position = {0.0, 0.0}) : Event(), position(position) {};
+  struct UIMouseMove : public Event {
+    UIMouseMove(Vector2 position = {0.0, 0.0}) : Event(), position(position) {};
 
-    DebugMouseMove(float x = 0.0f, float y = 0.0f) : Event(), position({x, y}) {};
+    UIMouseMove(float x = 0.0f, float y = 0.0f) : Event(), position({x, y}) {};
 
     Vector2 position;
   };

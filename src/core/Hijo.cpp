@@ -11,6 +11,9 @@
 
 namespace hijo {
   void Hijo::Run() {
+    if(!m_GameLayers)
+      return;
+
     m_GameLayers->PushState(CreateRef<Sandbox>());
     m_GameLayers->PushOverlay(CreateRef<UI>());
 
@@ -22,21 +25,6 @@ namespace hijo {
       m_CurrentTime = GetTime();
       m_Timestep = m_CurrentTime - lastTime;
 
-      if (IsWindowResized()) {
-        m_ScreenWidth = GetScreenWidth();
-        m_ScreenHeight = GetScreenHeight();
-        SetWindowSize(m_ScreenWidth, m_ScreenHeight);
-        EventManager::Dispatcher().enqueue<Events::WindowResized>({m_ScreenWidth, m_ScreenHeight});
-      }
-
-      auto mousePosition = GetMousePosition();
-
-      if (m_PreviousMousePosition.x != mousePosition.x ||
-          m_PreviousMousePosition.y != mousePosition.y) {
-        m_PreviousMousePosition = m_MousePosition;
-        m_MousePosition = mousePosition;
-      }
-
       m_WorldCoords = GetScreenToWorld2D(m_MousePosition, m_Camera);
 
       Input::Manager::Get().Poll();
@@ -45,20 +33,26 @@ namespace hijo {
         layer->Update(m_Timestep);
       }
 
-      for (const auto &layer: *m_GameLayers) {
-        layer->RenderTexture();
+      BeginTextureMode(m_RenderTexture);
+      ClearBackground(m_DefaultBackground);
+      for (auto layer: *m_GameLayers) {
+        if (layer->RenderTarget()) {
+          layer->Render();
+        }
       }
+      EndTextureMode();
 
       BeginDrawing();
-
-      ClearBackground(m_DefaultBackground);
 
       for (const auto &layer: *m_GameLayers) {
         layer->BeginFrame();
       }
 
-      for (const auto &layer: *m_GameLayers) {
-        layer->Render();
+      ClearBackground(m_DefaultBackground);
+
+      for (auto layer: *m_GameLayers) {
+        if (!layer->RenderTarget())
+          layer->Render();
       }
 
       for (const auto &layer: *m_GameLayers) {
@@ -67,7 +61,6 @@ namespace hijo {
 
       EndDrawing();
 
-      m_PreviousMousePosition = m_MousePosition;
       lastTime = m_CurrentTime;
     } while (!WindowShouldClose());
   }
@@ -97,13 +90,26 @@ namespace hijo {
 
     m_GameLayers = new GameLayerStack();
 
+    m_RenderTexture = LoadRenderTexture(m_ScreenWidth, m_ScreenHeight);
+    SetTextureFilter(m_RenderTexture.texture, TEXTURE_FILTER_POINT);
 
+    EventManager::Get().Attach<
+        Events::ViewportResized,
+        &Hijo::HandleViewportResized
+    >(this);
+
+    EventManager::Get().Attach<
+        Events::UIMouseMove,
+        &Hijo::HandleMouseMove
+    >(this);
   }
 
   Hijo::~Hijo() {
     EventManager::Get().DetachAll(this);
 
     delete m_GameLayers;
+
+    UnloadRenderTexture(m_RenderTexture);
 
     CloseAudioDevice();
     CloseWindow();
@@ -146,5 +152,25 @@ namespace hijo {
         break;
     }
   }
+
+    void Hijo::HandleViewportResized(const Events::ViewportResized &event) {
+      UnloadRenderTexture(m_RenderTexture);
+      m_RenderTexture = LoadRenderTexture((int) event.x, (int) event.y);
+      SetTextureFilter(m_RenderTexture.texture, TEXTURE_FILTER_POINT);
+
+      m_ViewportSize.x = event.x;
+      m_ViewportSize.y = event.y;
+
+      m_ScreenWidth = event.x;
+      m_ScreenHeight = event.y;
+
+      EventManager::Dispatcher().enqueue<Events::WindowResized>({m_ScreenWidth, m_ScreenHeight});
+    }
+
+    void Hijo::HandleMouseMove(const Events::UIMouseMove &event) {
+      m_PreviousMousePosition = m_MousePosition;
+
+      m_MousePosition = event.position;
+    }
 
 } // hijo

@@ -6,6 +6,7 @@
 
 #include "common/common.h"
 #include "core/layers/GameLayerStack.h"
+#include "core/events/EventManager.h"
 
 namespace hijo {
 
@@ -25,6 +26,8 @@ namespace hijo {
 
     Vector2 WorldCoords() { return m_WorldCoords; }
 
+    RenderTexture &GetRenderTexture() { return m_RenderTexture; }
+
   private:
     Hijo() {
       m_ConsoleSink = spdlog::stdout_color_mt("console");
@@ -41,6 +44,11 @@ namespace hijo {
     static void RaylibTraceCallback(int logLevel, const char *text, va_list args);
 
   private:
+    void HandleViewportResized(const Events::ViewportResized &event);
+
+    void HandleMouseMove(const Events::UIMouseMove &event);
+
+  private:
     GameLayerStack *m_GameLayers = nullptr;
 
     Ref<spdlog::logger> m_ConsoleSink;
@@ -52,6 +60,8 @@ namespace hijo {
 
     int32_t m_ScreenWidth = 800;
     int32_t m_ScreenHeight = 600;
+
+    Vector2 m_ViewportSize{800, 600};
 
     double m_CurrentTime = 0;
     double m_Timestep = 0;

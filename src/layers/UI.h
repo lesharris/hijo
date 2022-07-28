@@ -1,5 +1,7 @@
 #pragma once
 
+#include <raylib.h>
+
 #include "common/common.h"
 #include "core/Hijo.h"
 
@@ -24,11 +26,14 @@ namespace hijo {
 
     std::string Name() const noexcept override;
 
-    bool RenderTarget() override { return true; }
+    bool RenderTarget() override { return false; }
 
     void BeginFrame() override;
 
     void EndFrame() override;
+
+  private:
+    void Viewport();
 
   private:
     void HandleKeyPress(Events::KeyPressed &event);
@@ -37,6 +42,10 @@ namespace hijo {
     Hijo &app = Hijo::Get();
 
     bool m_ShowDemo = true;
+    bool m_ShowEmu = true;
+
+    ImVec2 m_PreviousWindowSize{0, 0};
+    ImVec2 m_PreviousMousePosition{0, 0};
   };
 
 } // hijo
