@@ -36,6 +36,10 @@ namespace hijo {
     void Viewport();
 
   private:
+    ImVec2 GetLargestSizeForViewport();
+    ImVec2 GetCenteredPositionForViewport(ImVec2 &windowSize);
+
+  private:
     void HandleKeyPress(Events::KeyPressed &event);
 
   private:

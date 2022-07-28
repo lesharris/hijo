@@ -1,4 +1,5 @@
 #include "UI.h"
+#include "imgui_internal.h"
 
 namespace hijo {
   void UI::OnAttach() {
@@ -101,9 +102,9 @@ namespace hijo {
 
     if (ImGui::BeginMenuBar()) {
       if (ImGui::BeginMenu("Windows")) {
-     //   ImGui::MenuItem("Meta Inspector", NULL, &m_ShowMeta);
-       // ImGui::MenuItem("UI Inspector", NULL, &m_ShowUI);
-       // ImGui::Separator();
+        //   ImGui::MenuItem("Meta Inspector", NULL, &m_ShowMeta);
+        // ImGui::MenuItem("UI Inspector", NULL, &m_ShowUI);
+        // ImGui::Separator();
         ImGui::MenuItem("ImGui Demo", NULL, &m_ShowDemo);
 
         ImGui::EndMenu();
@@ -129,15 +130,23 @@ namespace hijo {
   }
 
   void UI::Viewport() {
+    ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+    ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_FirstUseEver);
+
     // Render our Emu Viewport
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 
-    if (!ImGui::Begin("Joten", &m_ShowEmu,
+    ImGuiWindowClass window_class;
+    window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
+    ImGui::SetNextWindowClass(&window_class);
+
+    if (!ImGui::Begin("Screen", &m_ShowEmu,
                       ImGuiWindowFlags_NoScrollbar |
                       ImGuiWindowFlags_NoScrollWithMouse |
-                      ImGuiWindowFlags_NoCollapse)) {
+                      ImGuiWindowFlags_NoCollapse |
+                      ImGuiWindowFlags_NoDecoration)) {
       ImGui::End();
     } else {
       auto size = ImGui::GetContentRegionAvail();
@@ -147,6 +156,11 @@ namespace hijo {
 
       auto topLeft = ImVec2{windowPos.x + contentMin.x, windowPos.y + contentMin.y};
       auto bottomRight = ImVec2{topLeft.x + size.x, topLeft.y + size.y};
+
+      ImVec2 emuWindowSize = GetLargestSizeForViewport();
+      ImVec2 emuWindowPos = GetCenteredPositionForViewport(emuWindowSize);
+
+      ImGui::SetCursorPos(emuWindowPos);
 
       // Is mouse is over the viewport window...
       if (ImGui::IsMouseHoveringRect(topLeft, bottomRight)) {
@@ -162,8 +176,8 @@ namespace hijo {
       } else {
         auto &texture = Hijo::Get().GetRenderTexture();
         ImGui::Image(reinterpret_cast<ImTextureID>((uint64_t) texture.texture.id),
-                     size,
-                     {0, 0}, {1, -1});
+                     emuWindowSize,
+                     {0, 1}, {1, 0});
 
         m_PreviousWindowSize = size;
       }
@@ -172,5 +186,34 @@ namespace hijo {
     }
 
     ImGui::PopStyleVar(3);
+  }
+
+  ImVec2 UI::GetLargestSizeForViewport() {
+    ImVec2 size = ImGui::GetContentRegionAvail();
+
+    size.x -= ImGui::GetScrollX();
+    size.y -= ImGui::GetScrollY();
+
+    float aspectWidth = size.x;
+    float aspectHeight = aspectWidth / (10.0f / 9.0f);
+
+    if (aspectHeight > size.y) {
+      aspectHeight = size.y;
+      aspectWidth = aspectHeight * (10.0f / 9.0f);
+    }
+
+    return {aspectWidth, aspectHeight};
+  }
+
+  ImVec2 UI::GetCenteredPositionForViewport(ImVec2 &aspectSize) {
+    ImVec2 size = ImGui::GetContentRegionAvail();
+
+    size.x -= ImGui::GetScrollX();
+    size.y -= ImGui::GetScrollY();
+
+    float viewportX = (size.x / 2.0f) - (aspectSize.x / 2.0);
+    float viewportY = (size.y / 2.0f) - (aspectSize.y / 2.0);
+
+    return {viewportX + ImGui::GetCursorPosX(), viewportY + ImGui::GetCursorPosY()};
   }
 } // hijo
