@@ -33,7 +33,7 @@ namespace hijo {
 
     // Decode
     m_CurrentOpcode = &m_Opcodes[nextByte];
-    
+
     auto cycles = m_CurrentOpcode->tcycles;
 
     // Potentially populate the latch
@@ -3118,6 +3118,7 @@ namespace hijo {
         },
         {0xC7, "RST 00h",           AddressingMode::Implied,            1, 16,
             [this]() {
+              regs.pc += 1;
               RST(0);
               return 0;
             }
@@ -3187,6 +3188,7 @@ namespace hijo {
         },
         {0xCF, "RST 08h",           AddressingMode::Implied,            1, 16,
             [this]() {
+              regs.pc += 1;
               RST(0x8);
               return 0;
             }
@@ -3254,6 +3256,7 @@ namespace hijo {
         },
         {0xD7, "RST 10h",           AddressingMode::Implied,            1, 16,
             [this]() {
+              regs.pc += 1;
               RST(0x10);
               return 0;
             }
@@ -3320,6 +3323,7 @@ namespace hijo {
         },
         {0xDF, "RST 18h",           AddressingMode::Implied,            1, 16,
             [this]() {
+              regs.pc += 1;
               RST(0x18);
               return 0;
             }
@@ -3373,6 +3377,7 @@ namespace hijo {
         },
         {0xE7, "RST 20h",           AddressingMode::Implied,            1, 16,
             [this]() {
+              regs.pc += 1;
               RST(0x20);
               return 0;
             }
@@ -3424,6 +3429,7 @@ namespace hijo {
         },
         {0xEF, "RST 28h",           AddressingMode::Implied,            1, 16,
             [this]() {
+              regs.pc += 1;
               RST(0x28);
               return 0;
             }
@@ -3478,6 +3484,7 @@ namespace hijo {
         },
         {0xF7, "RST 30h",           AddressingMode::Implied,            1, 16,
             [this]() {
+              regs.pc += 1;
               RST(0x30);
               return 0;
             }
@@ -3539,6 +3546,7 @@ namespace hijo {
         },
         {0xFF, "RST 38h",           AddressingMode::Implied,            1, 16,
             [this]() {
+              regs.pc += 1;
               RST(0x38);
               return 0;
             }
