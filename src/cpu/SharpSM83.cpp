@@ -4,19 +4,699 @@ namespace hijo {
   SharpSM83::SharpSM83() {
     Reset();
     //InitCBOps();
-    //InitOpcodes();
+    InitOpcodes();
+  }
+
+  void SharpSM83::ConnectBus(System *system) {
+    bus = system;
+  }
+
+  void SharpSM83::Reset() {
+    regs.sp = 0xfffe;
+    regs.af = 0x01b0;
+    regs.bc = 0x0013;
+    regs.de = 0x00d8;
+    regs.hl = 0x014d;
+    regs.pc = 0;
   }
 
   void SharpSM83::InitCBOps() {
     m_CBOps = {
-        {0x0, "RLC B", 8,
-         [this]() {
-           RLC(Register::B);
-           return -8;
-         }
-        }
+        {0x0,  "RLC B",
+            [this]() {
+              RLC(Register::B);
+              return -8;
+            }
+        },
+        {0x1,  "RLC C",
+            [this]() {
+              RLC(Register::C);
+              return -8;
+            }
+        },
+        {0x2,  "RLC D",
+            [this]() {
+              RLC(Register::D);
+              return -8;
+            }
+        },
+        {0x3,  "RLC E",
+            [this]() {
+              RLC(Register::E);
+              return -8;
+            }
+        },
+        {0x4,  "RLC H",
+            [this]() {
+              RLC(Register::H);
+              return -8;
+            }
+        },
+        {0x5,  "RLC L",
+            [this]() {
+              RLC(Register::L);
+              return -8;
+            }
+        },
+        {0x6,  "RLC (HL)",
+            [this]() {
+              RLC(regs.hl);
+              return 0;
+            }
+        },
+        {0x7,  "RLC A",
+            [this]() {
+              RLC(Register::A);
+              return -8;
+            }
+        },
+        {0x8,  "RRC B",
+            [this]() {
+              RRC(Register::B);
+              return -8;
+            }
+        },
+        {0x9,  "RRC C",
+            [this]() {
+              RRC(Register::C);
+              return -8;
+            }
+        },
+        {0xA,  "RRC D",
+            [this]() {
+              RRC(Register::D);
+              return -8;
+            }
+        },
+        {0xB,  "RRC E",
+            [this]() {
+              RRC(Register::E);
+              return -8;
+            }
+        },
+        {0xC,  "RRC H",
+            [this]() {
+              RRC(Register::H);
+              return -8;
+            }
+        },
+        {0xD,  "RRC L",
+            [this]() {
+              RRC(Register::L);
+              return -8;
+            }
+        },
+        {0xE,  "RRC (HL)",
+            [this]() {
+              RRC(regs.hl);
+              return 0;
+            }
+        },
+        {0xF,  "RRC A",
+            [this]() {
+              RRC(Register::A);
+              return -8;
+            }
+        },
+        {0x10, "RL B",
+            [this]() {
+              RL(Register::B);
+              return -8;
+            }
+        },
+        {0x11, "RL C",
+            [this]() {
+              RL(Register::C);
+              return -8;
+            }
+        },
+        {0x12, "RL D",
+            [this]() {
+              RL(Register::D);
+              return -8;
+            }
+        },
+        {0x13, "RL E",
+            [this]() {
+              RL(Register::E);
+              return -8;
+            }
+        },
+        {0x14, "RL H",
+            [this]() {
+              RL(Register::H);
+              return -8;
+            }
+        },
+        {0x15, "RL L",
+            [this]() {
+              RL(Register::L);
+              return -8;
+            }
+        },
+        {0x16, "RL (HL)",
+            [this]() {
+              RL(regs.hl);
+              return 0;
+            }
+        },
+        {0x17, "RL A",
+            [this]() {
+              RL(Register::A);
+              return -8;
+            }
+        },
+        {0x18, "RR B",
+            [this]() {
+              RR(Register::B);
+              return -8;
+            }
+        },
+        {0x19, "RR C",
+            [this]() {
+              RR(Register::C);
+              return -8;
+            }
+        },
+        {0x1A, "RR D",
+            [this]() {
+              RR(Register::D);
+              return -8;
+            }
+        },
+        {0x1B, "RR E",
+            [this]() {
+              RR(Register::E);
+              return -8;
+            }
+        },
+        {0x1C, "RR H",
+            [this]() {
+              RR(Register::H);
+              return -8;
+            }
+        },
+        {0x1D, "RR L",
+            [this]() {
+              RR(Register::L);
+              return -8;
+            }
+        },
+        {0x1E, "RR (HL)",
+            [this]() {
+              RR(regs.hl);
+              return 0;
+            }
+        },
+        {0x1F, "RR A",
+            [this]() {
+              RR(Register::A);
+              return -8;
+            }
+        },
+        {0x20, "SLA B",
+            [this]() {
+              SLA(Register::B);
+              return -8;
+            }
+        },
+        {0x21, "SLA C",
+            [this]() {
+              SLA(Register::C);
+              return -8;
+            }
+        },
+        {0x22, "SLA D",
+            [this]() {
+              SLA(Register::D);
+              return -8;
+            }
+        },
+        {0x23, "SLA E",
+            [this]() {
+              SLA(Register::E);
+              return -8;
+            }
+        },
+        {0x24, "SLA H",
+            [this]() {
+              SLA(Register::H);
+              return -8;
+            }
+        },
+        {0x25, "SLA L",
+            [this]() {
+              SLA(Register::L);
+              return -8;
+            }
+        },
+        {0x26, "SLA (HL)",
+            [this]() {
+              SLA(regs.hl);
+              return 0;
+            }
+        },
+        {0x27, "SLA A",
+            [this]() {
+              SLA(Register::A);
+              return -8;
+            }
+        },
+        {0x28, "SRA B",
+            [this]() {
+              SRA(Register::B);
+              return -8;
+            }
+        },
+        {0x29, "SRA C",
+            [this]() {
+              SRA(Register::C);
+              return -8;
+            }
+        },
+        {0x2A, "SRA D",
+            [this]() {
+              SRA(Register::D);
+              return -8;
+            }
+        },
+        {0x2B, "SRA E",
+            [this]() {
+              SRA(Register::E);
+              return -8;
+            }
+        },
+        {0x2C, "SRA H",
+            [this]() {
+              SRA(Register::H);
+              return -8;
+            }
+        },
+        {0x2D, "SRA L",
+            [this]() {
+              SRA(Register::L);
+              return -8;
+            }
+        },
+        {0x2E, "SRA (HL)",
+            [this]() {
+              SRA(regs.hl);
+              return 0;
+            }
+        },
+        {0x2F, "SRA A",
+            [this]() {
+              SRA(Register::A);
+              return -8;
+            }
+        },
+        {0x30, "SWAP B",
+            [this]() {
+              SWAP(Register::B);
+              return -8;
+            }
+        },
+        {0x31, "SWAP C",
+            [this]() {
+              SWAP(Register::C);
+              return -8;
+            }
+        },
+        {0x32, "SWAP D",
+            [this]() {
+              SWAP(Register::D);
+              return -8;
+            }
+        },
+        {0x33, "SWAP E",
+            [this]() {
+              SWAP(Register::E);
+              return -8;
+            }
+        },
+        {0x34, "SWAP H",
+            [this]() {
+              SWAP(Register::H);
+              return -8;
+            }
+        },
+        {0x35, "SWAP L",
+            [this]() {
+              SWAP(Register::L);
+              return -8;
+            }
+        },
+        {0x36, "SWAP (HL)",
+            [this]() {
+              SWAP(regs.hl);
+              return 0;
+            }
+        },
+        {0x37, "SWAP A",
+            [this]() {
+              SWAP(Register::A);
+              return -8;
+            }
+        },
+        {0x38, "SRL B",
+            [this]() {
+              SRL(Register::B);
+              return -8;
+            }
+        },
+        {0x39, "SRL C",
+            [this]() {
+              SRL(Register::C);
+              return -8;
+            }
+        },
+        {0x3A, "SRL D",
+            [this]() {
+              SRL(Register::D);
+              return -8;
+            }
+        },
+        {0x3B, "SRL E",
+            [this]() {
+              SRL(Register::E);
+              return -8;
+            }
+        },
+        {0x3C, "SRL H",
+            [this]() {
+              SRL(Register::H);
+              return -8;
+            }
+        },
+        {0x3D, "SRL L",
+            [this]() {
+              SRL(Register::L);
+              return -8;
+            }
+        },
+        {0x3E, "SRL (HL)",
+            [this]() {
+              SRL(regs.hl);
+              return 0;
+            }
+        },
+        {0x3F, "SRL A",
+            [this]() {
+              SRL(Register::A);
+              return -8;
+            }
+        },
+        {0x40, "BIT 0, B",
+            [this]() {
+              BIT(0, Register::B);
+              return -8;
+            }
+        },
+        {0x41, "BIT 0, C",
+            [this]() {
+              BIT(0, Register::C);
+              return -8;
+            }
+        },
+        {0x42, "BIT 0, D",
+            [this]() {
+              BIT(0, Register::D);
+              return -8;
+            }
+        },
+        {0x43, "BIT 0, E",
+            [this]() {
+              BIT(0, Register::E);
+              return -8;
+            }
+        },
+        {0x44, "BIT 0, H",
+            [this]() {
+              BIT(0, Register::H);
+              return -8;
+            }
+        },
+        {0x45, "BIT 0, L",
+            [this]() {
+              BIT(0, Register::L);
+              return -8;
+            }
+        },
+        {0x46, "BIT 0, (HL)",
+            [this]() {
+              BIT(0, bus->cpuRead(regs.hl));
+              return -4;
+            }
+        },
+        {0x47, "BIT 0, A",
+            [this]() {
+              BIT(0, Register::A);
+              return -8;
+            }
+        },
+        {0x48, "BIT 1, B",
+            [this]() {
+              BIT(1, Register::B);
+              return -8;
+            }
+        },
+        {0x49, "BIT 1, C",
+            [this]() {
+              BIT(1, Register::C);
+              return -8;
+            }
+        },
+        {0x4A, "BIT 1, D",
+            [this]() {
+              BIT(1, Register::D);
+              return -8;
+            }
+        },
+        {0x4B, "BIT 1, E",
+            [this]() {
+              BIT(1, Register::E);
+              return -8;
+            }
+        },
+        {0x4C, "BIT 1, H",
+            [this]() {
+              BIT(1, Register::H);
+              return -8;
+            }
+        },
+        {0x4D, "BIT 1, L",
+            [this]() {
+              BIT(1, Register::L);
+              return -8;
+            }
+        },
+        {0x4E, "BIT 1, (HL)",
+            [this]() {
+              BIT(1, bus->cpuRead(regs.hl));
+              return -4;
+            }
+        },
+        {0x4F, "BIT 1, A",
+            [this]() {
+              BIT(1, Register::A);
+              return -8;
+            }
+        },
+        {0x50, "BIT 2, B",
+            [this]() {
+              BIT(2, Register::B);
+              return -8;
+            }
+        },
+        {0x51, "BIT 2, C",
+            [this]() {
+              BIT(2, Register::C);
+              return -8;
+            }
+        },
+        {0x52, "BIT 2, D",
+            [this]() {
+              BIT(2, Register::D);
+              return -8;
+            }
+        },
+        {0x53, "BIT 2, E",
+            [this]() {
+              BIT(2, Register::E);
+              return -8;
+            }
+        },
+        {0x54, "BIT 2, H",
+            [this]() {
+              BIT(2, Register::H);
+              return -8;
+            }
+        },
+        {0x55, "BIT 2, L",
+            [this]() {
+              BIT(2, Register::L);
+              return -8;
+            }
+        },
+        {0x56, "BIT 2, (HL)",
+            [this]() {
+              BIT(2, bus->cpuRead(regs.hl));
+              return -4;
+            }
+        },
+        {0x57, "BIT 2, A",
+            [this]() {
+              BIT(2, Register::A);
+              return -8;
+            }
+        },
+        {0x58, "BIT 3, B",
+            [this]() {
+              BIT(3, Register::B);
+              return -8;
+            }
+        },
+        {0x59, "BIT 3, C",
+            [this]() {
+              BIT(3, Register::C);
+              return -8;
+            }
+        },
+        {0x5A, "BIT 3, D",
+            [this]() {
+              BIT(3, Register::D);
+              return -8;
+            }
+        },
+        {0x5B, "BIT 3, E",
+            [this]() {
+              BIT(3, Register::E);
+              return -8;
+            }
+        },
+        {0x5C, "BIT 3, H",
+            [this]() {
+              BIT(3, Register::H);
+              return -8;
+            }
+        },
+        {0x5D, "BIT 3, L",
+            [this]() {
+              BIT(3, Register::L);
+              return -8;
+            }
+        },
+        {0x5E, "BIT 3, (HL)",
+            [this]() {
+              BIT(3, bus->cpuRead(regs.hl));
+              return -4;
+            }
+        },
+        {0x5F, "BIT 3, A",
+            [this]() {
+              BIT(3, Register::A);
+              return -8;
+            }
+        },
+        {0x60, "BIT 4, B",
+            [this]() {
+              BIT(4, Register::B);
+              return -8;
+            }
+        },
+        {0x61, "BIT 4, C",
+            [this]() {
+              BIT(4, Register::C);
+              return -8;
+            }
+        },
+        {0x62, "BIT 4, D",
+            [this]() {
+              BIT(4, Register::D);
+              return -8;
+            }
+        },
+        {0x63, "BIT 4, E",
+            [this]() {
+              BIT(4, Register::E);
+              return -8;
+            }
+        },
+        {0x64, "BIT 4, H",
+            [this]() {
+              BIT(4, Register::H);
+              return -8;
+            }
+        },
+        {0x65, "BIT 4, L",
+            [this]() {
+              BIT(4, Register::L);
+              return -8;
+            }
+        },
+        {0x66, "BIT 4, (HL)",
+            [this]() {
+              BIT(4, bus->cpuRead(regs.hl));
+              return -4;
+            }
+        },
+        {0x67, "BIT 4, A",
+            [this]() {
+              BIT(4, Register::A);
+              return -8;
+            }
+        },
+        {0x68, "BIT 5, B",
+            [this]() {
+              BIT(5, Register::B);
+              return -8;
+            }
+        },
+        {0x69, "BIT 5, C",
+            [this]() {
+              BIT(5, Register::C);
+              return -8;
+            }
+        },
+        {0x6A, "BIT 5, D",
+            [this]() {
+              BIT(5, Register::D);
+              return -8;
+            }
+        },
+        {0x6B, "BIT 5, E",
+            [this]() {
+              BIT(5, Register::E);
+              return -8;
+            }
+        },
+        {0x6C, "BIT 5, H",
+            [this]() {
+              BIT(5, Register::H);
+              return -8;
+            }
+        },
+        {0x6D, "BIT 5, L",
+            [this]() {
+              BIT(5, Register::L);
+              return -8;
+            }
+        },
+        {0x6E, "BIT 5, (HL)",
+            [this]() {
+              BIT(5, bus->cpuRead(regs.hl));
+              return -4;
+            }
+        },
+        {0x6F, "BIT 5, A",
+            [this]() {
+              BIT(5, Register::A);
+              return -8;
+            }
+        },
     };
   }
+
 
   void SharpSM83::InitOpcodes() {
     m_Opcodes = {
@@ -1711,19 +2391,6 @@ namespace hijo {
             }
         },
     };
-  }
-
-  void SharpSM83::ConnectBus(System *system) {
-    bus = system;
-  }
-
-  void SharpSM83::Reset() {
-    regs.sp = 0xfffe;
-    regs.af = 0x01b0;
-    regs.bc = 0x0013;
-    regs.de = 0x00d8;
-    regs.hl = 0x014d;
-    regs.pc = 0;
   }
 
   void SharpSM83::LD(SharpSM83::Register r, uint16_t data) {

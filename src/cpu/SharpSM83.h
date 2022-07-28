@@ -131,18 +131,13 @@ namespace hijo {
     struct CBOp {
       uint8_t value = 0;
       std::string label = "";
-      uint32_t tcycles = 0;
-      uint32_t mcycles = 0;
       std::function<int8_t()> exec{};
 
       CBOp(uint8_t value,
            const std::string &label,
-           uint32_t tcycles,
            const std::function<int8_t()> &exec)
           : value(value),
             label(label),
-            tcycles(tcycles),
-            mcycles(tcycles / 4),
             exec(exec) {}
     };
     /////////////////////////
