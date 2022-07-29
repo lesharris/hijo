@@ -59,6 +59,9 @@ namespace hijo {
 
     ImVec2 m_PreviousWindowSize{0, 0};
     ImVec2 m_PreviousMousePosition{0, 0};
+
+    int32_t m_PrevScreenWidth;
+    int32_t m_PrevScreenHeight;
   };
 
 } // hijo

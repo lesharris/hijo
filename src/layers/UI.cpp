@@ -217,6 +217,9 @@ namespace hijo {
                       ImGuiWindowFlags_NoDecoration)) {
       ImGui::End();
     } else {
+      auto windowWidth = GetScreenWidth();
+      auto windowHeight = GetScreenHeight();
+
       auto size = ImGui::GetContentRegionAvail();
       auto contentMin = ImGui::GetWindowContentRegionMin();
       auto windowPos = ImGui::GetWindowPos();
@@ -238,8 +241,11 @@ namespace hijo {
         EventManager::Dispatcher().trigger<Events::UIMouseMove>({position.x, position.y});
       }
 
-      if (size.x != m_PreviousWindowSize.x || size.y != m_PreviousWindowSize.y) {
+      if (windowWidth != m_PrevScreenWidth || windowHeight != m_PrevScreenHeight) {
         m_PreviousWindowSize = size;
+        m_PrevScreenWidth = windowWidth;
+        m_PrevScreenHeight = windowHeight;
+
         EventManager::Dispatcher().enqueue<Events::ViewportResized>({size.x, size.y});
       } else {
         auto &texture = Hijo::Get().GetRenderTexture();
@@ -248,6 +254,8 @@ namespace hijo {
                      {0, 1}, {1, 0});
 
         m_PreviousWindowSize = size;
+        m_PrevScreenWidth = windowWidth;
+        m_PrevScreenHeight = windowHeight;
       }
 
       ImGui::End();
@@ -332,7 +340,7 @@ namespace hijo {
       ImGui::Checkbox("C", &C);
       ImGui::Separator();
 
-      
+
       ImGui::End();
     }
   }

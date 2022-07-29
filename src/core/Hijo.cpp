@@ -29,6 +29,9 @@ namespace hijo {
 
       Input::Manager::Get().Poll();
 
+      // Dispatch queued events
+      EventManager::Dispatcher().update();
+
       for (const auto &layer: *m_GameLayers) {
         layer->Update(m_Timestep);
       }
@@ -89,6 +92,9 @@ namespace hijo {
     m_Camera.zoom = 1.0f;
 
     m_GameLayers = new GameLayerStack();
+
+    float aspect = 10.0f / 9.0f;
+    m_ScreenWidth = static_cast<int32_t>(m_ScreenHeight * aspect);
 
     m_RenderTexture = LoadRenderTexture(m_ScreenWidth, m_ScreenHeight);
     SetTextureFilter(m_RenderTexture.texture, TEXTURE_FILTER_POINT);
@@ -160,16 +166,19 @@ namespace hijo {
 
   void Hijo::HandleViewportResized(const Events::ViewportResized &event) {
     UnloadRenderTexture(m_RenderTexture);
-    m_RenderTexture = LoadRenderTexture((int) event.x, (int) event.y);
-    SetTextureFilter(m_RenderTexture.texture, TEXTURE_FILTER_POINT);
 
     m_ViewportSize.x = event.x;
     m_ViewportSize.y = event.y;
 
-    m_ScreenWidth = event.x;
+    float aspect = 10.0f / 9.0f;
+
+    m_ScreenWidth = static_cast<int32_t>(event.y * aspect);
     m_ScreenHeight = event.y;
 
-    EventManager::Dispatcher().enqueue<Events::WindowResized>({m_ScreenWidth, m_ScreenHeight});
+    m_RenderTexture = LoadRenderTexture(m_ScreenWidth, m_ScreenHeight);
+    SetTextureFilter(m_RenderTexture.texture, TEXTURE_FILTER_POINT);
+
+    spdlog::get("console")->info("{} {}", m_ScreenWidth, m_ScreenHeight);
   }
 
   void Hijo::HandleMouseMove(const Events::UIMouseMove &event) {
