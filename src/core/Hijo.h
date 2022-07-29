@@ -74,8 +74,8 @@ namespace hijo {
 
     bool m_Running = true;
 
-    int32_t m_ScreenWidth = 800;
-    int32_t m_ScreenHeight = 600;
+    int32_t m_ScreenWidth = 1600;
+    int32_t m_ScreenHeight = 900;
 
     Vector2 m_ViewportSize{1600, 900};
 
