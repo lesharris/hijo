@@ -1,12 +1,15 @@
 #pragma once
 
 #include "raylib.h"
+
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 #include "common/common.h"
 #include "core/layers/GameLayerStack.h"
 #include "core/events/EventManager.h"
+
+#include "system/System.h"
 
 namespace hijo {
 
@@ -28,6 +31,15 @@ namespace hijo {
 
     RenderTexture &GetRenderTexture() { return m_RenderTexture; }
 
+    void System(System *system) {
+      m_System = system;
+    }
+
+    template<typename T>
+    T *System() {
+      return static_cast<T *>(m_System);
+    }
+
   private:
     Hijo() {
       m_ConsoleSink = spdlog::stdout_color_mt("console");
@@ -48,6 +60,8 @@ namespace hijo {
 
     void HandleMouseMove(const Events::UIMouseMove &event);
 
+    void HandleWantQuit(const Events::WantQuit &event);
+
   private:
     GameLayerStack *m_GameLayers = nullptr;
 
@@ -58,10 +72,12 @@ namespace hijo {
 
     Color m_DefaultBackground{30, 30, 30, 255};
 
+    bool m_Running = true;
+
     int32_t m_ScreenWidth = 800;
     int32_t m_ScreenHeight = 600;
 
-    Vector2 m_ViewportSize{800, 600};
+    Vector2 m_ViewportSize{1600, 900};
 
     double m_CurrentTime = 0;
     double m_Timestep = 0;
@@ -72,6 +88,8 @@ namespace hijo {
 
     Camera2D m_Camera{};
     RenderTexture m_RenderTexture;
+
+    class System *m_System = nullptr;
   };
 
 } // hijo

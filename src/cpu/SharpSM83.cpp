@@ -1,5 +1,7 @@
 #include "SharpSM83.h"
 
+#include <fmt/format.h>
+
 namespace hijo {
   SharpSM83::SharpSM83() {
     Reset();
@@ -924,6 +926,23 @@ namespace hijo {
   uint8_t SharpSM83::SET(uint8_t bit, uint8_t data) {
     auto mask = bitmasks[bit];
     return data | mask;
+  }
+
+  void SharpSM83::Disassemble(uint16_t start_addr, uint16_t end_addr) {
+    m_Disassembly.clear();
+
+    while (start_addr < end_addr) {
+      auto byte = bus->cpuRead(start_addr);
+      auto &op = m_Opcodes[byte];
+
+      m_Disassembly.push_back({
+                                  start_addr,
+                                  op.label,
+                                  AddressingModeLabel[op.mode]
+                              });
+
+      start_addr += op.length;
+    }
   }
 
 } // hijo

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstring>
+
 #include "System.h"
 #include "cpu/SharpSM83.h"
 
@@ -15,6 +17,9 @@ namespace hijo {
     uint8_t cpuRead(uint16_t addr, bool readOnly = false) override;
 
     void Update(double timestep) override;
+
+  private:
+    friend class UI;
 
   private:
     uint8_t m_Ram[2048]; // temp

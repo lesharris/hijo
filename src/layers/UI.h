@@ -13,6 +13,7 @@
 #include "external/imgui/imgui.h"
 #include "external/imgui/backends/imgui_impl_opengl3.h"
 #include "external/imgui/backends/imgui_impl_glfw.h"
+#include "external/imgui_extra/imgui_memory_editor.h"
 
 namespace hijo {
 
@@ -35,8 +36,13 @@ namespace hijo {
   private:
     void Viewport();
 
+    void Disassembly();
+
+    void Registers();
+
   private:
     ImVec2 GetLargestSizeForViewport();
+
     ImVec2 GetCenteredPositionForViewport(ImVec2 &windowSize);
 
   private:
@@ -47,6 +53,9 @@ namespace hijo {
 
     bool m_ShowDemo = true;
     bool m_ShowEmu = true;
+    bool m_ShowMemEditor = true;
+    bool m_ShowDisassembly = true;
+    bool m_ShowRegisters = true;
 
     ImVec2 m_PreviousWindowSize{0, 0};
     ImVec2 m_PreviousMousePosition{0, 0};

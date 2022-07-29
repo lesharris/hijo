@@ -1,6 +1,8 @@
 #include "UI.h"
 #include "imgui_internal.h"
 
+#include "system/Gameboy.h"
+
 namespace hijo {
   void UI::OnAttach() {
 // Hack to use opengl3 backend for imgui
@@ -101,15 +103,43 @@ namespace hijo {
     }
 
     if (ImGui::BeginMenuBar()) {
-      if (ImGui::BeginMenu("Windows")) {
-        //   ImGui::MenuItem("Meta Inspector", NULL, &m_ShowMeta);
-        // ImGui::MenuItem("UI Inspector", NULL, &m_ShowUI);
-        // ImGui::Separator();
-        ImGui::MenuItem("ImGui Demo", NULL, &m_ShowDemo);
+      if (ImGui::BeginMenu("File")) {
+        if (ImGui::MenuItem("Quit", NULL)) {
+          EventManager::Dispatcher().trigger<Events::WantQuit>();
+        }
 
         ImGui::EndMenu();
       }
+      if (ImGui::BeginMenu("Tools")) {
+        ImGui::MenuItem("Registers", NULL, &m_ShowRegisters);
+        ImGui::MenuItem("Memory Editor", NULL, &m_ShowMemEditor);
+        ImGui::MenuItem("Disassembly", NULL, &m_ShowDisassembly);
+        ImGui::Separator();
+        ImGui::MenuItem("ImGui Demo", NULL, &m_ShowDemo);
+        ImGui::EndMenu();
+      }
       ImGui::EndMenuBar();
+    }
+
+    Gameboy *gb = app.System<Gameboy>();
+    auto &cpu = gb->m_Cpu;
+    auto &regs = cpu.GetRegisters();
+
+    if (m_ShowMemEditor) {
+      static MemoryEditor memoryEditor;
+
+      memoryEditor.HighlightMin = regs.pc;
+      memoryEditor.HighlightMax = regs.pc;
+
+      memoryEditor.DrawWindow("Memory", gb->m_Ram, 2048);
+    }
+
+    if (m_ShowDisassembly) {
+      Disassembly();
+    }
+
+    if (m_ShowRegisters) {
+      Registers();
     }
 
     if (m_ShowDemo) {
@@ -125,10 +155,48 @@ namespace hijo {
     return "ui";
   }
 
+  /*
+   * Event Handlers
+   */
   void UI::HandleKeyPress(Events::KeyPressed &) {
 
   }
 
+  /*
+   * Utilities
+   */
+  ImVec2 UI::GetLargestSizeForViewport() {
+    ImVec2 size = ImGui::GetContentRegionAvail();
+
+    size.x -= ImGui::GetScrollX();
+    size.y -= ImGui::GetScrollY();
+
+    float aspectWidth = size.x;
+    float aspectHeight = aspectWidth / (10.0f / 9.0f);
+
+    if (aspectHeight > size.y) {
+      aspectHeight = size.y;
+      aspectWidth = aspectHeight * (10.0f / 9.0f);
+    }
+
+    return {aspectWidth, aspectHeight};
+  }
+
+  ImVec2 UI::GetCenteredPositionForViewport(ImVec2 &aspectSize) {
+    ImVec2 size = ImGui::GetContentRegionAvail();
+
+    size.x -= ImGui::GetScrollX();
+    size.y -= ImGui::GetScrollY();
+
+    float viewportX = (size.x / 2.0f) - (aspectSize.x / 2.0);
+    float viewportY = (size.y / 2.0f) - (aspectSize.y / 2.0);
+
+    return {viewportX + ImGui::GetCursorPosX(), viewportY + ImGui::GetCursorPosY()};
+  }
+
+  /*
+   * Windows
+   */
   void UI::Viewport() {
     ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
     ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_FirstUseEver);
@@ -139,7 +207,7 @@ namespace hijo {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 
     ImGuiWindowClass window_class;
-    window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar;
+    window_class.DockNodeFlagsOverrideSet = ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_NoDockingOverMe;
     ImGui::SetNextWindowClass(&window_class);
 
     if (!ImGui::Begin("Screen", &m_ShowEmu,
@@ -188,32 +256,84 @@ namespace hijo {
     ImGui::PopStyleVar(3);
   }
 
-  ImVec2 UI::GetLargestSizeForViewport() {
-    ImVec2 size = ImGui::GetContentRegionAvail();
+  void UI::Disassembly() {
+    Gameboy *gb = app.System<Gameboy>();
+    auto &cpu = gb->m_Cpu;
+    auto &regs = cpu.GetRegisters();
 
-    size.x -= ImGui::GetScrollX();
-    size.y -= ImGui::GetScrollY();
-
-    float aspectWidth = size.x;
-    float aspectHeight = aspectWidth / (10.0f / 9.0f);
-
-    if (aspectHeight > size.y) {
-      aspectHeight = size.y;
-      aspectWidth = aspectHeight * (10.0f / 9.0f);
+    if (cpu.Disassembly().empty()) {
+      cpu.Disassemble(0, 2048);
     }
 
-    return {aspectWidth, aspectHeight};
+    if (!ImGui::Begin("Disassembly", &m_ShowDisassembly)) {
+      ImGui::End();
+    } else {
+      if (ImGui::BeginTable("disa", 3, ImGuiTableFlags_ScrollY |
+                                       ImGuiTableFlags_BordersOuterH |
+                                       ImGuiTableFlags_BordersOuterV |
+                                       ImGuiTableFlags_RowBg)) {
+        auto &lines = cpu.Disassembly();
+
+        ImGui::TableSetupColumn("Address", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+        ImGui::TableSetupColumn("Instruction", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Addr. Mode", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+
+        ImGuiListClipper clipper;
+        clipper.Begin(lines.size());
+
+        while (clipper.Step()) {
+          for (auto item = clipper.DisplayStart; item < clipper.DisplayEnd; item++) {
+            auto &line = lines[item];
+            ImGui::TableNextRow();
+
+            if (line.addr == regs.pc) {
+              ImU32 row_bg_color = ImGui::GetColorU32(ImVec4(0.18f, 0.47f, 0.59f, 0.65f));
+              ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, row_bg_color);
+            }
+
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextUnformatted(fmt::format("${:04X}", line.addr).c_str());
+
+
+            ImGui::TableSetColumnIndex(1);
+            ImGui::TextUnformatted(line.text.c_str());
+
+
+            ImGui::TableSetColumnIndex(2);
+            ImGui::TextUnformatted(fmt::format("[{}]", line.mode.c_str()).c_str());
+          }
+        }
+        ImGui::EndTable();
+      }
+
+      ImGui::End();
+    }
   }
 
-  ImVec2 UI::GetCenteredPositionForViewport(ImVec2 &aspectSize) {
-    ImVec2 size = ImGui::GetContentRegionAvail();
+  void UI::Registers() {
+    Gameboy *gb = app.System<Gameboy>();
+    auto &cpu = gb->m_Cpu;
+    auto &regs = cpu.GetRegisters();
 
-    size.x -= ImGui::GetScrollX();
-    size.y -= ImGui::GetScrollY();
+    if (!ImGui::Begin("Registers", &m_ShowRegisters)) {
+      ImGui::End();
+    } else {
+      bool Z = cpu.Zero();
+      bool N = cpu.Negative();
+      bool H = cpu.HalfCarry();
+      bool C = cpu.Carry();
 
-    float viewportX = (size.x / 2.0f) - (aspectSize.x / 2.0);
-    float viewportY = (size.y / 2.0f) - (aspectSize.y / 2.0);
+      ImGui::Checkbox("Z", &Z);
+      ImGui::SameLine();
+      ImGui::Checkbox("N", &N);
+      ImGui::SameLine();
+      ImGui::Checkbox("H", &H);
+      ImGui::SameLine();
+      ImGui::Checkbox("C", &C);
+      ImGui::Separator();
 
-    return {viewportX + ImGui::GetCursorPosX(), viewportY + ImGui::GetCursorPosY()};
+      
+      ImGui::End();
+    }
   }
 } // hijo

@@ -89,10 +89,8 @@ namespace hijo::Events {
     Input::ActionType type{};
   };
 
-  struct DebugToggled : public Event {
-    DebugToggled(bool enabled = false) : Event(), enabled(enabled) {}
-
-    bool enabled;
+  struct WantQuit : public Event {
+    WantQuit() : Event() {}
   };
 
   struct ViewportResized : public Event {

@@ -1,11 +1,18 @@
 #include "Gameboy.h"
-#include <spdlog/spdlog.h>
+
+#include "core/Hijo.h"
 
 namespace hijo {
 
   Gameboy::Gameboy() {
+    auto &app = Hijo::Get();
+
+    app.System(this);
+
     m_Cpu.ConnectBus(this);
 
+    memset(m_Ram, 0, 2048);
+    
     m_Ram[0] = 0x3C; // INC A
     m_Ram[1] = 0xC3; // JP $0000;
     m_Ram[2] = 0;

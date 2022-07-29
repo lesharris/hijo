@@ -4,6 +4,7 @@
 #include <string>
 #include <functional>
 #include <vector>
+#include <unordered_map>
 
 #include "common/common.h"
 #include "system/System.h"
@@ -39,6 +40,21 @@ namespace hijo {
       ModifiedPageZero,
       Relative,
       Bit
+    };
+
+    std::unordered_map<AddressingMode, std::string> AddressingModeLabel = {
+        {AddressingMode::Implied,            "IMP"},
+        {AddressingMode::Immediate,          "IMM"},
+        {AddressingMode::ExtendedImmediate,  "EXTI"},
+        {AddressingMode::Register,           "REG"},
+        {AddressingMode::RegisterIndirectAF, "REGI"},
+        {AddressingMode::RegisterIndirectBC, "REGI"},
+        {AddressingMode::RegisterIndirectDE, "REGI"},
+        {AddressingMode::RegisterIndirectHL, "REGI"},
+        {AddressingMode::Extended,           "EXT"},
+        {AddressingMode::ModifiedPageZero,   "MPZ"},
+        {AddressingMode::Relative,           "REL"},
+        {AddressingMode::Bit,                "BIT"},
     };
 
     enum class Register {
@@ -133,6 +149,12 @@ namespace hijo {
             exec(exec) {}
     };
 
+    struct DisassemblyLine {
+      uint16_t addr;
+      std::string text;
+      std::string mode;
+    };
+
   public:
     SharpSM83();
 
@@ -160,18 +182,24 @@ namespace hijo {
       m_Halted = isHalted;
     }
 
-    bool Hated() const {
+    bool Halted() const {
       return m_Halted;
     }
 
-    const Registers &GetRegisters() const {
+    std::vector<DisassemblyLine> &Disassembly() {
+      return m_Disassembly;
+    }
+
+    Registers &GetRegisters() {
       return regs;
     }
+
+    void Disassemble(uint16_t start_addr, uint16_t end_addr);
 
     /*
      * Flag Handling
      */
-  private:
+  protected:
     void SetCarry(uint16_t sum) {
       if ((sum >> 8) != 0) {
         SetCarry();
@@ -549,6 +577,9 @@ namespace hijo {
       }
     }
 
+  private:
+    friend class UI;
+    
     /*
      * State
      */
@@ -569,6 +600,8 @@ namespace hijo {
     bool m_Stopped = false;
     bool m_InterruptsEnabled = true;
     bool m_Halted = false;
+
+    std::vector<DisassemblyLine> m_Disassembly;
   };
 
 } // hijo

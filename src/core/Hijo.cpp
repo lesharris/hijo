@@ -11,7 +11,7 @@
 
 namespace hijo {
   void Hijo::Run() {
-    if(!m_GameLayers)
+    if (!m_GameLayers)
       return;
 
     m_GameLayers->PushState(CreateRef<Sandbox>());
@@ -62,7 +62,7 @@ namespace hijo {
       EndDrawing();
 
       lastTime = m_CurrentTime;
-    } while (!WindowShouldClose());
+    } while (m_Running && !WindowShouldClose());
   }
 
   void Hijo::Initialize() {
@@ -101,6 +101,11 @@ namespace hijo {
     EventManager::Get().Attach<
         Events::UIMouseMove,
         &Hijo::HandleMouseMove
+    >(this);
+
+    EventManager::Get().Attach<
+        Events::WantQuit,
+        &Hijo::HandleWantQuit
     >(this);
   }
 
@@ -153,24 +158,28 @@ namespace hijo {
     }
   }
 
-    void Hijo::HandleViewportResized(const Events::ViewportResized &event) {
-      UnloadRenderTexture(m_RenderTexture);
-      m_RenderTexture = LoadRenderTexture((int) event.x, (int) event.y);
-      SetTextureFilter(m_RenderTexture.texture, TEXTURE_FILTER_POINT);
+  void Hijo::HandleViewportResized(const Events::ViewportResized &event) {
+    UnloadRenderTexture(m_RenderTexture);
+    m_RenderTexture = LoadRenderTexture((int) event.x, (int) event.y);
+    SetTextureFilter(m_RenderTexture.texture, TEXTURE_FILTER_POINT);
 
-      m_ViewportSize.x = event.x;
-      m_ViewportSize.y = event.y;
+    m_ViewportSize.x = event.x;
+    m_ViewportSize.y = event.y;
 
-      m_ScreenWidth = event.x;
-      m_ScreenHeight = event.y;
+    m_ScreenWidth = event.x;
+    m_ScreenHeight = event.y;
 
-      EventManager::Dispatcher().enqueue<Events::WindowResized>({m_ScreenWidth, m_ScreenHeight});
-    }
+    EventManager::Dispatcher().enqueue<Events::WindowResized>({m_ScreenWidth, m_ScreenHeight});
+  }
 
-    void Hijo::HandleMouseMove(const Events::UIMouseMove &event) {
-      m_PreviousMousePosition = m_MousePosition;
+  void Hijo::HandleMouseMove(const Events::UIMouseMove &event) {
+    m_PreviousMousePosition = m_MousePosition;
 
-      m_MousePosition = event.position;
-    }
+    m_MousePosition = event.position;
+  }
+
+  void Hijo::HandleWantQuit(const Events::WantQuit &) {
+    m_Running = false;
+  }
 
 } // hijo
