@@ -151,7 +151,9 @@ namespace hijo {
 
     struct DisassemblyLine {
       uint16_t addr;
+      uint16_t index;
       std::string text;
+      std::string bytes;
       std::string mode;
     };
 
@@ -284,19 +286,29 @@ namespace hijo {
      * Addressing Modes
      */
   private:
-    void ImpliedMode() {}
+    void ImpliedMode() {
+    }
 
-    void RegisterMode() {}
+    void RegisterMode() {
+    }
+
+    uint8_t IMM(uint16_t addr) {
+      return bus->cpuRead(addr + 1) & 0xFF;;
+    }
 
     void ImmediateMode() {
-      latch = bus->cpuRead(regs.pc + 1) & 0xFF;
+      latch = IMM(regs.pc);
+    }
+
+    uint16_t EXTI(uint16_t addr) {
+      uint8_t low = bus->cpuRead(addr + 1);
+      uint8_t high = bus->cpuRead(addr + 2);
+
+      return (uint16_t) ((high << 8) | low);
     }
 
     void ExtendedImmediateMode() {
-      uint8_t low = bus->cpuRead(regs.pc + 1);
-      uint8_t high = bus->cpuRead(regs.pc + 2);
-
-      latch = (uint16_t) ((high << 8) | low);
+      latch = EXTI(regs.pc);
     }
 
     void RegisterIndirectAF() {
@@ -315,13 +327,13 @@ namespace hijo {
       RegisterIndirectMode(Register::HL);
     }
 
-    void RegisterIndirectMode(const Register &r) {
+    uint16_t REGI(const Register &r) {
       uint16_t rvalue;
 
       auto rPtr = WideRegToPointer(r);
 
       if (!rPtr) {
-        return;
+        return 0;
       }
 
       rvalue = *rPtr;
@@ -329,15 +341,19 @@ namespace hijo {
       uint8_t low = rvalue & 0xFF;
       uint8_t high = (rvalue & 0xFF00) >> 8;
 
-      latch = (uint16_t) ((high << 8) | low);
+      return (uint16_t) ((high << 8) | low);
+    }
+
+    void RegisterIndirectMode(const Register &r) {
+      latch = REGI(r);
     }
 
     void ExtendedMode() {
       ExtendedImmediateMode();
     }
 
-    void ModifiedPageZeroMode() {
-      uint8_t p = bus->cpuRead(regs.pc + 1);
+    uint8_t MPZ(uint16_t addr) {
+      uint8_t p = bus->cpuRead(addr + 1);
 
       switch (p) {
         case 0:
@@ -348,18 +364,26 @@ namespace hijo {
         case 0x28:
         case 0x30:
         case 0x38:
-          latch = p;
+          return p;
           break;
 
         default:
           // Todo Handle invalid P here.
-          latch = 0xFF;
+          return 0xFF;
           break;
       }
     }
 
+    void ModifiedPageZeroMode() {
+      latch = MPZ(regs.pc);
+    }
+
+    int8_t REL(uint16_t addr) {
+      return static_cast<int8_t>(IMM(addr));
+    }
+
     void RelativeMode() {
-      ImmediateMode();
+      latch = REL(regs.pc);
     }
 
     void BitMode() {}
@@ -579,7 +603,7 @@ namespace hijo {
 
   private:
     friend class UI;
-    
+
     /*
      * State
      */

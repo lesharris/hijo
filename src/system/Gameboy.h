@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "System.h"
+#include "core/events/EventManager.h"
 #include "cpu/SharpSM83.h"
 
 namespace hijo {
@@ -11,6 +12,8 @@ namespace hijo {
   public:
     Gameboy();
 
+    ~Gameboy();
+
   public:
     void cpuWrite(uint16_t addr, uint8_t data) override;
 
@@ -18,12 +21,22 @@ namespace hijo {
 
     void Update(double timestep) override;
 
+    bool Running() const {
+      return m_Run;
+    }
+    
+  private:
+    void HandleCPUExecution(const Events::ExecuteCPU &event);
+
+    void HandleCPUStep(const Events::StepCPU &event);
+
   private:
     friend class UI;
 
   private:
-    uint8_t m_Ram[2048]; // temp
+    uint8_t m_Ram[65536]; // temp
     SharpSM83 m_Cpu;
+    bool m_Run = false;
     // uint64_t m_CycleCount = 0;
   };
 

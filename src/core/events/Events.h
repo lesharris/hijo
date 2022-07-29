@@ -108,4 +108,14 @@ namespace hijo::Events {
     Vector2 position;
   };
 
+  struct ExecuteCPU : public Event {
+    ExecuteCPU(bool execute = true) : Event(), execute(execute) {}
+
+    bool execute;
+  };
+
+  struct StepCPU : public Event {
+    StepCPU() : Event() {}
+  };
+
 }

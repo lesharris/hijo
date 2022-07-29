@@ -1,5 +1,6 @@
 #include "SharpSM83.h"
 
+#include <regex>
 #include <fmt/format.h>
 
 namespace hijo {
@@ -595,8 +596,10 @@ namespace hijo {
   }
 
   void SharpSM83::RET() {
-    regs.pc = regs.sp;
-    regs.sp += 2;
+    uint8_t low = bus->cpuRead(++regs.sp);
+    uint8_t high = bus->cpuRead(++regs.sp);
+
+    regs.pc = (high << 8) | low;
   }
 
   /* Rotates, Swaps, Shifts */
@@ -931,13 +934,97 @@ namespace hijo {
   void SharpSM83::Disassemble(uint16_t start_addr, uint16_t end_addr) {
     m_Disassembly.clear();
 
+    uint16_t index = 0;
     while (start_addr < end_addr) {
       auto byte = bus->cpuRead(start_addr);
       auto &op = m_Opcodes[byte];
+      std::string bytes = fmt::format("{:02X} ", op.value);
+      std::string code = op.label;
+
+      switch (op.mode) {
+        case AddressingMode::Implied:
+        case AddressingMode::Bit:
+        case AddressingMode::Register:
+        case AddressingMode::RegisterIndirectAF:
+        case AddressingMode::RegisterIndirectBC:
+        case AddressingMode::RegisterIndirectDE:
+        case AddressingMode::RegisterIndirectHL:
+          break;
+
+        case AddressingMode::Immediate: {
+          uint8_t data = IMM(start_addr);
+          std::string operand = fmt::format("#${:02X}", data);
+
+          std::smatch m;
+          std::regex re{"u8"};
+
+          if (std::regex_search(code, m, re)) {
+            code.replace(m[0].first, m[0].second, operand);
+          }
+
+          bytes += fmt::format("{:02X}", data);
+        }
+          break;
+        case AddressingMode::ExtendedImmediate: {
+          uint16_t data = EXTI(start_addr);
+          uint8_t low = data & 0xFF;
+          uint8_t high = (data & 0xFF00) >> 8;
+          std::string addr = fmt::format("${:02X}{:02X}", high, low);
+
+          std::smatch m;
+          std::regex re{"u16"};
+
+          if (std::regex_search(code, m, re)) {
+            code.replace(m[0].first, m[0].second, addr);
+          }
+
+          bytes += fmt::format("{:02X} {:02X}", low, high);
+        }
+          break;
+        case AddressingMode::Extended: {
+          uint16_t data = EXTI(start_addr);
+          uint8_t low = data & 0xFF;
+          uint8_t high = (data & 0xFF00) >> 8;
+          std::string addr = fmt::format("${:02X}{:02X}", high, low);
+
+          std::smatch m;
+          std::regex re{"u16"};
+
+          if (std::regex_search(code, m, re)) {
+            code.replace(m[0].first, m[0].second, addr);
+          }
+
+          bytes += fmt::format("{:02X} {:02X}", low, high);
+        }
+          break;
+        case AddressingMode::ModifiedPageZero: {
+          uint8_t data = MPZ(start_addr);
+          bytes += fmt::format("{:02X}", data);
+        }
+          break;
+
+        case AddressingMode::Relative: {
+          int8_t data = REL(start_addr);
+          uint32_t addr = start_addr + data;
+          std::string addrString = fmt::format("${:04X} ; [{}]", addr, data);
+
+          std::smatch m;
+          std::regex re{"i8"};
+
+          if (std::regex_search(code, m, re)) {
+            code.replace(m[0].first, m[0].second, addrString);
+          }
+
+          bytes += fmt::format("{:02X}", static_cast<uint8_t>(data));
+        }
+          break;
+      }
 
       m_Disassembly.push_back({
                                   start_addr,
-                                  op.label,
+                                  index++,
+                                  code,
+                                  bytes,
                                   AddressingModeLabel[op.mode]
                               });
 

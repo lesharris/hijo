@@ -27,6 +27,8 @@ namespace hijo {
     ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
+    m_PrevPC = 1;
+
     EventManager::Get().Attach<
         Events::KeyPressed,
         &::hijo::UI::HandleKeyPress
@@ -131,7 +133,7 @@ namespace hijo {
       memoryEditor.HighlightMin = regs.pc;
       memoryEditor.HighlightMax = regs.pc;
 
-      memoryEditor.DrawWindow("Memory", gb->m_Ram, 2048);
+      memoryEditor.DrawWindow("Memory", gb->m_Ram, 64 * 1024);
     }
 
     if (m_ShowDisassembly) {
@@ -270,19 +272,20 @@ namespace hijo {
     auto &regs = cpu.GetRegisters();
 
     if (cpu.Disassembly().empty()) {
-      cpu.Disassemble(0, 2048);
+      cpu.Disassemble(0, (64 * 1024) - 1);
     }
 
     if (!ImGui::Begin("Disassembly", &m_ShowDisassembly)) {
       ImGui::End();
     } else {
-      if (ImGui::BeginTable("disa", 3, ImGuiTableFlags_ScrollY |
+      if (ImGui::BeginTable("disa", 4, ImGuiTableFlags_ScrollY |
                                        ImGuiTableFlags_BordersOuterH |
                                        ImGuiTableFlags_BordersOuterV |
                                        ImGuiTableFlags_RowBg)) {
         auto &lines = cpu.Disassembly();
 
         ImGui::TableSetupColumn("Address", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+        ImGui::TableSetupColumn("Bytes", ImGuiTableColumnFlags_WidthFixed, 70.0f);
         ImGui::TableSetupColumn("Instruction", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("Addr. Mode", ImGuiTableColumnFlags_WidthFixed, 40.0f);
 
@@ -302,15 +305,33 @@ namespace hijo {
             ImGui::TableSetColumnIndex(0);
             ImGui::TextUnformatted(fmt::format("${:04X}", line.addr).c_str());
 
-
             ImGui::TableSetColumnIndex(1);
-            ImGui::TextUnformatted(line.text.c_str());
-
+            ImGui::TextUnformatted(fmt::format("{}", line.bytes).c_str());
 
             ImGui::TableSetColumnIndex(2);
+            ImGui::TextUnformatted(line.text.c_str());
+            
+            ImGui::TableSetColumnIndex(3);
             ImGui::TextUnformatted(fmt::format("[{}]", line.mode.c_str()).c_str());
           }
         }
+
+        if (regs.pc != m_PrevPC) {
+          auto it = std::find_if(
+              lines.begin(),
+              lines.end(),
+              [regs](const auto &line) {
+                return line.addr == regs.pc;
+              });
+
+          if (it != std::end(lines)) {
+            auto size = ImGui::GetWindowSize();
+            ImGui::SetScrollY(
+                (clipper.ItemsHeight * it->index - (size.y / 2) - (clipper.ItemsHeight / clipper.ItemsCount)));
+            m_PrevPC = regs.pc;
+          }
+        }
+
         ImGui::EndTable();
       }
 
@@ -338,9 +359,62 @@ namespace hijo {
       ImGui::Checkbox("H", &H);
       ImGui::SameLine();
       ImGui::Checkbox("C", &C);
+      ImGui::SameLine();
+
+      if (ImGui::Button(gb->Running() ? "Pause" : "Run")) {
+        EventManager::Dispatcher().enqueue<Events::ExecuteCPU>({!gb->Running()});
+      }
+      ImGui::SameLine();
+
+      if (!gb->Running()) {
+        if (ImGui::Button("Step")) {
+          EventManager::Dispatcher().enqueue<Events::StepCPU>({});
+        }
+      }
       ImGui::Separator();
 
+      ImGui::BeginTable("regs", 3);
+      ImGui::TableSetupColumn("r", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+      ImGui::TableSetupColumn("rh", ImGuiTableColumnFlags_None);
+      ImGui::TableSetupColumn("rd", ImGuiTableColumnFlags_None);
 
+      struct RegItem {
+        std::string label;
+        uint16_t value;
+        bool wide = false;
+      };
+
+      std::vector<RegItem> items = {
+          {"AF", regs.af, true},
+          {"BC", regs.bc, true},
+          {"DE", regs.de, true},
+          {"HL", regs.hl, true},
+          {"A",  regs.a},
+          {"B",  regs.b},
+          {"C",  regs.c},
+          {"D",  regs.d},
+          {"E",  regs.e},
+          {"H",  regs.h},
+          {"L",  regs.l},
+          {"SP", regs.sp},
+          {"PC", regs.pc},
+      };
+
+      for (const auto &item: items) {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::TextUnformatted(item.label.c_str());
+        ImGui::TableSetColumnIndex(1);
+        if (item.wide) {
+          ImGui::TextUnformatted(fmt::format("${:04X}", item.value).c_str());
+        } else {
+          ImGui::TextUnformatted(fmt::format("${:02X}", item.value).c_str());
+        }
+        ImGui::TableSetColumnIndex(2);
+        ImGui::TextUnformatted(fmt::format("{}", item.value).c_str());
+      }
+
+      ImGui::EndTable();
       ImGui::End();
     }
   }

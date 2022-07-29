@@ -62,6 +62,8 @@ namespace hijo {
 
     int32_t m_PrevScreenWidth;
     int32_t m_PrevScreenHeight;
+
+    uint16_t m_PrevPC;
   };
 
 } // hijo
