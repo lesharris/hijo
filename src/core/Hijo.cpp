@@ -177,8 +177,6 @@ namespace hijo {
 
     m_RenderTexture = LoadRenderTexture(m_ScreenWidth, m_ScreenHeight);
     SetTextureFilter(m_RenderTexture.texture, TEXTURE_FILTER_POINT);
-
-    spdlog::get("console")->info("{} {}", m_ScreenWidth, m_ScreenHeight);
   }
 
   void Hijo::HandleMouseMove(const Events::UIMouseMove &event) {
