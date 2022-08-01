@@ -78,37 +78,46 @@ namespace hijo {
     struct Registers {
       uint16_t pc;
       uint16_t sp;
+      uint8_t ie;
 
-      union {
-        struct {
-          uint8_t f;
-          uint8_t a;
+      struct {
+        union {
+          struct {
+            uint8_t f;
+            uint8_t a;
+          };
+          uint16_t af;
         };
-        uint16_t af;
       };
 
-      union {
-        struct {
-          uint8_t c;
-          uint8_t b;
+      struct {
+        union {
+          struct {
+            uint8_t c;
+            uint8_t b;
+          };
+          uint16_t bc;
         };
-        uint16_t bc;
       };
 
-      union {
-        struct {
-          uint8_t e;
-          uint8_t d;
+      struct {
+        union {
+          struct {
+            uint8_t e;
+            uint8_t d;
+          };
+          uint16_t de;
         };
-        uint16_t de;
       };
 
-      union {
-        struct {
-          uint8_t l;
-          uint8_t h;
+      struct {
+        union {
+          struct {
+            uint8_t l;
+            uint8_t h;
+          };
+          uint16_t hl;
         };
-        uint16_t hl;
       };
     };
 
@@ -161,7 +170,7 @@ namespace hijo {
     SharpSM83();
 
     /* Execution */
-    void Cycle(uint32_t cycles);
+    void Cycle(uint32_t tcycles);
 
     uint8_t Step();
 
@@ -604,6 +613,8 @@ namespace hijo {
   private:
     friend class UI;
 
+    friend class Interrupts;
+
     /*
      * State
      */
@@ -612,9 +623,7 @@ namespace hijo {
     uint16_t latch;
     System *bus = nullptr;
 
-    uint32_t m_Cycles = 0;
-    uint32_t m_CurrentCycleCount = 0;
-    uint32_t m_CycleDelta = 0;
+    uint32_t m_CycleCount = 0;
 
     Opcode *m_CurrentOpcode = nullptr;
 
@@ -622,9 +631,10 @@ namespace hijo {
     std::vector<CBOp> m_CBOps{};
 
     bool m_Stopped = false;
-    bool m_InterruptsEnabled = true;
     bool m_Halted = false;
 
+    bool m_InterruptsEnabled = true;
+    bool m_EnablingInterrupts = false;
     std::vector<DisassemblyLine> m_Disassembly;
   };
 

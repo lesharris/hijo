@@ -3,6 +3,8 @@
 #include <regex>
 #include <fmt/format.h>
 
+#include "Interrupts.h"
+
 namespace hijo {
   SharpSM83::SharpSM83() {
     Reset();
@@ -15,24 +17,54 @@ namespace hijo {
    *****************************************/
 
   // Execute a fixed number of tcycles
-  void SharpSM83::Cycle(uint32_t cycles) {
-    if (m_Halted || m_Stopped)
-      return;
+  void SharpSM83::Cycle(uint32_t tcycles) {
+    if (!(m_Halted || m_Stopped)) {
 
-    m_Cycles = cycles + m_CycleDelta;
-    m_CurrentCycleCount = 0;
+      uint32_t cycles = 0;
 
-    while (m_CurrentCycleCount < m_Cycles) {
-      m_CurrentCycleCount += Step();
+      do {
+        uint8_t nextByte = bus->cpuRead(regs.pc);
+        auto opcode = &m_Opcodes[nextByte];
+        auto opCycles = opcode->tcycles;
+
+        do {
+          if (++m_CycleCount >= opCycles) {
+            AddressingModeExec(opcode->mode);
+            auto offset = opcode->exec();
+
+            if (offset != 0)
+              m_CycleCount += offset;
+            else
+              m_CycleCount = 0;
+          }
+        } while (m_CycleCount != opCycles && m_CycleCount != 0 && ++cycles < tcycles);
+
+      } while (cycles < tcycles);
+    } else {
+      if (regs.ie) {
+        m_Halted = false;
+        m_Stopped = false;
+        if ((tcycles - 1) > 0)
+          Cycle(tcycles - 1);
+      }
     }
 
-    m_CycleDelta = m_Cycles - m_CurrentCycleCount;
+    if (m_InterruptsEnabled) {
+      Interrupts::HandleInterrupts(*this);
+      m_EnablingInterrupts = false;
+    }
+
+    if (m_EnablingInterrupts) {
+      m_InterruptsEnabled = true;
+    }
   }
 
   // Does one Fetch/Decode/Execute and returns the tcycles taken.
   uint8_t SharpSM83::Step() {
     // Fetch
     uint8_t nextByte = bus->cpuRead(regs.pc);
+
+    m_CycleCount = 0;
 
     // Decode
     m_CurrentOpcode = &m_Opcodes[nextByte];
@@ -46,6 +78,15 @@ namespace hijo {
     auto offset = m_CurrentOpcode->exec();
     cycles += offset;
 
+    if (m_InterruptsEnabled) {
+      Interrupts::HandleInterrupts(*this);
+      m_EnablingInterrupts = false;
+    }
+
+    if (m_EnablingInterrupts) {
+      m_InterruptsEnabled = true;
+    }
+
     return static_cast<uint8_t>(cycles);
   }
 
@@ -57,12 +98,16 @@ namespace hijo {
   }
 
   void SharpSM83::Reset() {
-    regs.sp = 0xfffe;
-    regs.af = 0x01b0;
-    regs.bc = 0x0013;
-    regs.de = 0x00d8;
-    regs.hl = 0x014d;
-    regs.pc = 0;
+    regs.af = 0xB001;
+    regs.bc = 0x1300;
+    regs.de = 0xD800;
+    regs.hl = 0x4D01;
+    regs.pc = 0x100;
+    regs.sp = 0xFFFE;
+
+    regs.ie = 0;
+    m_InterruptsEnabled = false;
+    m_EnablingInterrupts = false;
   }
 
   // Load the things
@@ -90,20 +135,16 @@ namespace hijo {
         regs.l = data & 0xFF;
         break;
       case Register::AF:
-        regs.f = (data & 0xFF00) >> 8;
-        regs.a = data & 0xFF;
+        regs.af = data;
         break;
       case Register::BC:
-        regs.c = (data & 0xFF00) >> 8;
-        regs.b = data & 0xFF;
+        regs.bc = data;
         break;
       case Register::DE:
-        regs.e = (data & 0xFF00) >> 8;
-        regs.d = data & 0xFF;
+        regs.de = data;
         break;
       case Register::HL:
-        regs.l = (data & 0xFF00) >> 8;
-        regs.h = data & 0xFF;
+        regs.hl = data;
         break;
       case Register::SP:
         regs.sp = data;
@@ -169,8 +210,8 @@ namespace hijo {
   }
 
   void SharpSM83::LD(uint16_t address, uint16_t data) {
-    uint8_t low = (data & 0xFF00) >> 8;
-    uint8_t high = data & 0xFF;
+    uint8_t high = (data >> 8) & 0xFF;
+    uint8_t low = data & 0xFF;
 
     LD(address, low);
     LD(address + 1, high);
@@ -193,9 +234,9 @@ namespace hijo {
     auto incReg = [this](uint8_t *r) {
       uint16_t res = *r + 1;
 
-      SetZero(res);
+      SetZero(res & 0xFF);
       ClearNegative();
-      SetHalfCarry(res);
+      SetHalfCarry(res & 0xFF);
 
       *r = res & 0xFF;
     };
@@ -255,9 +296,9 @@ namespace hijo {
     auto decReg = [this](uint8_t *r) {
       uint16_t res = *r - 1;
 
-      SetZero(res);
+      SetZero(res & 0xFF);
       SetNegative();
-      SetHalfCarry(res);
+      SetHalfCarry(res & 0xFF);
 
       *r = res & 0xFF;
     };
@@ -314,6 +355,28 @@ namespace hijo {
   }
 
   void SharpSM83::ADD(SharpSM83::Register target, SharpSM83::Register operand, bool isWide) {
+    switch (target) {
+      case Register::BC:
+      case Register::DE:
+      case Register::HL:
+        isWide = true;
+        break;
+
+      default:
+        break;
+    }
+
+    switch (operand) {
+      case Register::BC:
+      case Register::DE:
+      case Register::HL:
+        isWide = true;
+        break;
+
+      default:
+        break;
+    }
+
     if (isWide) {
       auto targetPtr = WideRegToPointer(target);
       auto opPtr = WideRegToPointer(operand);
@@ -371,9 +434,9 @@ namespace hijo {
   void SharpSM83::ADD(uint8_t data) {
     uint16_t res = regs.a + data;
 
-    SetZero(res);
+    SetZero(res & 0xFF);
     ClearNegative();
-    SetHalfCarry(res);
+    SetHalfCarry(res & 0xFF);
     SetCarry(res);
 
     regs.a = static_cast<uint8_t>(res & 0xFF);
@@ -394,8 +457,8 @@ namespace hijo {
     int32_t diff = regs.a + data + Carry();
 
     ClearNegative();
-    SetHalfCarry(diff);
-    SetZero(diff);
+    SetHalfCarry(diff & 0xFF);
+    SetZero(diff & 0xFF);
     SetCarry(diff);
 
     regs.a = static_cast<uint8_t>(diff);
@@ -416,8 +479,8 @@ namespace hijo {
     int32_t diff = regs.a - data;
 
     SetNegative();
-    SetHalfCarry(diff);
-    SetZero(diff);
+    SetHalfCarry(diff & 0xFF);
+    SetZero(diff & 0xFF);
     SetCarry(diff);
 
     regs.a = static_cast<uint8_t>(diff);
@@ -438,8 +501,8 @@ namespace hijo {
     int32_t diff = regs.a - data - Carry();
 
     SetNegative();
-    SetHalfCarry(diff);
-    SetZero(diff);
+    SetHalfCarry(diff & 0xFF);
+    SetZero(diff & 0xFF);
     SetCarry(diff);
 
     regs.a = static_cast<uint8_t>(diff);
@@ -555,7 +618,7 @@ namespace hijo {
     auto low = bus->cpuRead(regs.sp++);
     auto high = bus->cpuRead(regs.sp++);
 
-    *targetPtr = (low << 8) | high;
+    *targetPtr = (high << 8) | low;
   }
 
   void SharpSM83::PUSH(SharpSM83::Register operand) {
@@ -566,17 +629,17 @@ namespace hijo {
       return;
     }
 
-    uint8_t low = (*targetPtr & 0xFF00) >> 8;
-    uint8_t high = *targetPtr & 0xFF;
-
+    uint8_t high = (*targetPtr & 0xFF00) >> 8;
     bus->cpuWrite(--regs.sp, high);
+
+    uint8_t low = *targetPtr & 0xFF;
     bus->cpuWrite(--regs.sp, low);
   }
 
   // Flow control
   void SharpSM83::JR(int8_t offset) {
     int16_t res = (int16_t) regs.pc +
-                  (int8_t) (offset & 0xFF);
+                  (int8_t) (offset);
 
     regs.pc = (uint16_t) res;
   }
@@ -586,8 +649,8 @@ namespace hijo {
   }
 
   void SharpSM83::CALL(uint16_t address) {
-    uint8_t low = (regs.pc & 0xFF00) >> 8;
-    uint8_t high = regs.pc & 0xFF;
+    uint8_t high = (regs.pc & 0xFF00) >> 8;
+    uint8_t low = regs.pc & 0xFF;
 
     bus->cpuWrite(--regs.sp, high);
     bus->cpuWrite(--regs.sp, low);
@@ -596,16 +659,16 @@ namespace hijo {
   }
 
   void SharpSM83::RET() {
-    uint8_t low = bus->cpuRead(++regs.sp);
-    uint8_t high = bus->cpuRead(++regs.sp);
+    uint8_t low = bus->cpuRead(regs.sp++);
+    uint8_t high = bus->cpuRead(regs.sp++);
 
     regs.pc = (high << 8) | low;
   }
 
   /* Rotates, Swaps, Shifts */
   void SharpSM83::RST(uint16_t operand) {
-    uint8_t low = (regs.pc & 0xFF00) >> 8;
-    uint8_t high = regs.pc & 0xFF;
+    uint8_t high = (regs.pc & 0xFF00) >> 8;
+    uint8_t low = regs.pc & 0xFF;
 
     bus->cpuWrite(--regs.sp, high);
     bus->cpuWrite(--regs.sp, low);
@@ -634,7 +697,7 @@ namespace hijo {
 
     ClearNegative();
     ClearHalfCarry();
-    SetZero(res);
+    SetZero(res & 0xFF);
     if (res & 1) {
       SetCarry();
     } else {
@@ -666,7 +729,7 @@ namespace hijo {
 
     ClearNegative();
     ClearHalfCarry();
-    SetZero(res);
+    SetZero(res & 0xFF);
 
     if (low) {
       SetCarry();
@@ -699,7 +762,7 @@ namespace hijo {
 
     ClearNegative();
     ClearHalfCarry();
-    SetZero(static_cast<uint8_t>(wide));
+    SetZero(static_cast<uint8_t>(wide & 0xFF));
 
     if (carry) {
       SetCarry();
@@ -707,7 +770,7 @@ namespace hijo {
       ClearCarry();
     }
 
-    return static_cast<uint8_t>(wide);
+    return static_cast<uint8_t>(wide & 0xFF);
   }
 
   void SharpSM83::RR(SharpSM83::Register operand) {
@@ -732,7 +795,7 @@ namespace hijo {
 
     ClearNegative();
     ClearHalfCarry();
-    SetZero(res);
+    SetZero(res & 0xFF);
 
     if (low) {
       SetCarry();
@@ -822,7 +885,7 @@ namespace hijo {
   uint8_t SharpSM83::SWAP(uint8_t data) {
     ClearNegative();
     ClearHalfCarry();
-    SetZero((data << 4) | (data >> 4));
+    SetZero(data);
     ClearCarry();
 
     return (data << 4) | (data >> 4);

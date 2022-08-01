@@ -6,7 +6,7 @@
 
 #include "Hijo.h"
 
-#include "layers/Sandbox.h"
+#include "layers/Emu.h"
 #include "layers/UI.h"
 
 namespace hijo {
@@ -14,7 +14,7 @@ namespace hijo {
     if (!m_GameLayers)
       return;
 
-    m_GameLayers->PushState(CreateRef<Sandbox>());
+    m_GameLayers->PushState(CreateRef<Emu>());
     m_GameLayers->PushOverlay(CreateRef<UI>());
 
     double lastTime = GetTime();

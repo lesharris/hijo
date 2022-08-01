@@ -118,4 +118,10 @@ namespace hijo::Events {
     StepCPU() : Event() {}
   };
 
+  struct ExecuteUntil : public Event {
+    ExecuteUntil(uint16_t addr) : Event(), addr(addr) {}
+
+    uint16_t addr;
+  };
+
 }

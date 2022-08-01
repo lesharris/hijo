@@ -10,7 +10,10 @@
 
 namespace hijo {
 
-  class Sandbox : public GameLayer {
+  class Emu : public GameLayer {
+  public:
+    Emu() : GameLayer("Emu"), m_GB(Gameboy::Get()) {}
+
   public:
     void OnAttach() override;
 
@@ -34,7 +37,7 @@ namespace hijo {
   private:
     Hijo &app = Hijo::Get();
 
-    Gameboy m_GB;
+    Gameboy &m_GB;
   };
 
 } // hijo

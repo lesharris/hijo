@@ -2,6 +2,7 @@
 #include "imgui_internal.h"
 
 #include "system/Gameboy.h"
+#include "cpu/Interrupts.h"
 
 namespace hijo {
   void UI::OnAttach() {
@@ -114,7 +115,9 @@ namespace hijo {
       }
       if (ImGui::BeginMenu("Tools")) {
         ImGui::MenuItem("Registers", NULL, &m_ShowRegisters);
-        ImGui::MenuItem("Memory Editor", NULL, &m_ShowMemEditor);
+        ImGui::MenuItem("ROM Viewer", NULL, &m_ShowRom);
+        ImGui::MenuItem("Work RAM Viewer", NULL, &m_ShowWorkRam);
+        ImGui::MenuItem("High RAM Viewer", NULL, &m_ShowHighRam);
         ImGui::MenuItem("Disassembly", NULL, &m_ShowDisassembly);
         ImGui::Separator();
         ImGui::MenuItem("ImGui Demo", NULL, &m_ShowDemo);
@@ -127,13 +130,31 @@ namespace hijo {
     auto &cpu = gb->m_Cpu;
     auto &regs = cpu.GetRegisters();
 
-    if (m_ShowMemEditor) {
-      static MemoryEditor memoryEditor;
+    if (m_ShowRom) {
+      static MemoryEditor romViewer;
 
-      memoryEditor.HighlightMin = regs.pc;
-      memoryEditor.HighlightMax = regs.pc;
+      romViewer.HighlightMin = regs.pc;
+      romViewer.HighlightMax = regs.pc;
 
-      memoryEditor.DrawWindow("Memory", gb->m_Ram, 64 * 1024);
+      romViewer.DrawWindow("ROM", &gb->m_Cartridge->Data(), 32 * 1024);
+    }
+
+    if (m_ShowWorkRam) {
+      static MemoryEditor wramEditor;
+
+      wramEditor.DrawWindow("WRAM", &gb->m_WorkRam, 8 * 1024, 0xC000);
+    }
+
+    if (m_ShowHighRam) {
+      static MemoryEditor hramEditor;
+
+      hramEditor.DrawWindow("HRAM", &gb->m_HighRam, 127, 0xFF80);
+    }
+
+    if (m_ShowVRAM) {
+      static MemoryEditor vramEditor;
+
+      vramEditor.DrawWindow("VRAM", &gb->m_PPU.m_VideoRam, 8 * 1024, 0x8000);
     }
 
     if (m_ShowDisassembly) {
@@ -200,6 +221,8 @@ namespace hijo {
    * Windows
    */
   void UI::Viewport() {
+    static bool firstRun = true;
+
     ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
     ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_FirstUseEver);
 
@@ -243,11 +266,13 @@ namespace hijo {
         EventManager::Dispatcher().trigger<Events::UIMouseMove>({position.x, position.y});
       }
 
-      if (windowWidth != m_PrevScreenWidth || windowHeight != m_PrevScreenHeight) {
+      if (firstRun || windowWidth != m_PrevScreenWidth || windowHeight != m_PrevScreenHeight) {
         m_PreviousWindowSize = size;
         m_PrevScreenWidth = windowWidth;
         m_PrevScreenHeight = windowHeight;
 
+        firstRun = false;
+        
         EventManager::Dispatcher().enqueue<Events::ViewportResized>({size.x, size.y});
       } else {
         auto &texture = Hijo::Get().GetRenderTexture();
@@ -269,7 +294,6 @@ namespace hijo {
   void UI::Disassembly() {
     Gameboy *gb = app.System<Gameboy>();
     auto &cpu = gb->m_Cpu;
-    auto &regs = cpu.GetRegisters();
 
     if (cpu.Disassembly().empty()) {
       cpu.Disassemble(0, (64 * 1024) - 1);
@@ -294,6 +318,8 @@ namespace hijo {
 
         while (clipper.Step()) {
           for (auto item = clipper.DisplayStart; item < clipper.DisplayEnd; item++) {
+            auto &regs = cpu.GetRegisters();
+
             auto &line = lines[item];
             ImGui::TableNextRow();
 
@@ -310,11 +336,14 @@ namespace hijo {
 
             ImGui::TableSetColumnIndex(2);
             ImGui::TextUnformatted(line.text.c_str());
-            
+
             ImGui::TableSetColumnIndex(3);
             ImGui::TextUnformatted(fmt::format("[{}]", line.mode.c_str()).c_str());
           }
         }
+
+        auto &regs = cpu.GetRegisters();
+
 
         if (regs.pc != m_PrevPC) {
           auto it = std::find_if(
@@ -352,18 +381,25 @@ namespace hijo {
       bool H = cpu.HalfCarry();
       bool C = cpu.Carry();
 
-      ImGui::Checkbox("Z", &Z);
-      ImGui::SameLine();
-      ImGui::Checkbox("N", &N);
-      ImGui::SameLine();
-      ImGui::Checkbox("H", &H);
-      ImGui::SameLine();
-      ImGui::Checkbox("C", &C);
-      ImGui::SameLine();
+      bool VBlank = Interrupts::VBlank(cpu);
+      bool LCDStat = Interrupts::LCDStat(cpu);
+      bool Serial = Interrupts::Serial(cpu);
+      bool Timer = Interrupts::Timer(cpu);
+      bool Joypad = Interrupts::Joypad(cpu);
+
+      bool MasterInterrupt = cpu.m_InterruptsEnabled;
+
+      ImGui::BeginTable("flagsbtnscycles", 2);
+      ImGui::TableSetupColumn("btns");
+      ImGui::TableSetupColumn("cycles");
+
+      ImGui::TableNextRow();
+      ImGui::TableSetColumnIndex(0);
 
       if (ImGui::Button(gb->Running() ? "Pause" : "Run")) {
         EventManager::Dispatcher().enqueue<Events::ExecuteCPU>({!gb->Running()});
       }
+
       ImGui::SameLine();
 
       if (!gb->Running()) {
@@ -371,18 +407,28 @@ namespace hijo {
           EventManager::Dispatcher().enqueue<Events::StepCPU>({});
         }
       }
+
+      ImGui::SameLine();
+
+      if (!gb->Running()) {
+        static uint16_t addr = 0;
+        ImGui::InputScalar("Run to", ImGuiDataType_U16, &addr, NULL, NULL, "%04X");
+        if (ImGui::Button("Go")) {
+          EventManager::Dispatcher().enqueue<Events::ExecuteUntil>({addr});
+        }
+      }
+
+      ImGui::TableSetColumnIndex(1);
+      auto cycleInfo = fmt::format("Total Cycles: {}", gb->Cycles());
+      auto posX = (ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(cycleInfo.c_str()).x
+                   - ImGui::GetScrollX() - 2 * ImGui::GetStyle().ItemSpacing.x);
+      if (posX > ImGui::GetCursorPosX())
+        ImGui::SetCursorPosX(posX);
+      ImGui::TextUnformatted(cycleInfo.c_str());
+
+      ImGui::EndTable();
+
       ImGui::Separator();
-
-      ImGui::BeginTable("regs", 3);
-      ImGui::TableSetupColumn("r", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-      ImGui::TableSetupColumn("rh", ImGuiTableColumnFlags_None);
-      ImGui::TableSetupColumn("rd", ImGuiTableColumnFlags_None);
-
-      struct RegItem {
-        std::string label;
-        uint16_t value;
-        bool wide = false;
-      };
 
       std::vector<RegItem> items = {
           {"AF", regs.af, true},
@@ -396,9 +442,16 @@ namespace hijo {
           {"E",  regs.e},
           {"H",  regs.h},
           {"L",  regs.l},
-          {"SP", regs.sp},
-          {"PC", regs.pc},
+          {"SP", regs.sp, true},
+          {"PC", regs.pc, true},
+          {"IE", regs.ie}
       };
+
+      ImGui::BeginTable("regs", 4, ImGuiTableFlags_RowBg);
+      ImGui::TableSetupColumn("r", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+      ImGui::TableSetupColumn("rh", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+      ImGui::TableSetupColumn("rd", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+      ImGui::TableSetupColumn("rb", ImGuiTableColumnFlags_None);
 
       for (const auto &item: items) {
         ImGui::TableNextRow();
@@ -412,9 +465,51 @@ namespace hijo {
         }
         ImGui::TableSetColumnIndex(2);
         ImGui::TextUnformatted(fmt::format("{}", item.value).c_str());
+        ImGui::TableSetColumnIndex(3);
+        if (item.wide) {
+          uint8_t highByte = (item.value & 0xFF00) >> 8;
+          uint8_t lowByte = item.value & 0xFF;
+          uint8_t highByteHighNib = (highByte & 0xF0) >> 4;
+          uint8_t highByteLowNib = highByte & 0xF;
+          uint8_t lowByteHighNib = (lowByte & 0xF0) >> 4;
+          uint8_t lowByteLowNib = lowByte & 0xF;
+
+          ImGui::TextUnformatted(fmt::format("{:04b} {:04b} {:04b} {:04b}",
+                                             highByteHighNib,
+                                             highByteLowNib,
+                                             lowByteHighNib,
+                                             lowByteLowNib).c_str());
+        } else {
+          uint8_t highNib = (item.value & 0xF0) >> 4;
+          uint8_t lowNib = item.value & 0xF;
+
+          ImGui::TextUnformatted(fmt::format("{:04b} {:04b}", highNib, lowNib).c_str());
+        }
       }
 
       ImGui::EndTable();
+      ImGui::Separator();
+
+      // Flags
+      ImGui::BeginGroup();
+      ImGui::Checkbox("Z", &Z);
+      ImGui::SameLine();
+      ImGui::Checkbox("N", &N);
+      ImGui::SameLine();
+      ImGui::Checkbox("H", &H);
+      ImGui::SameLine();
+      ImGui::Checkbox("C", &C);
+      ImGui::EndGroup();
+      ImGui::Separator();
+      ImGui::Checkbox("Master Interrupt", &MasterInterrupt);
+      ImGui::Checkbox("VBlank", &VBlank);
+      ImGui::Checkbox("LCD Stat", &LCDStat);
+      ImGui::Checkbox("Timer", &Timer);
+      ImGui::Checkbox("Serial", &Serial);
+      ImGui::Checkbox("Joypad", &Joypad);
+
+      // Interrupts
+
       ImGui::End();
     }
   }

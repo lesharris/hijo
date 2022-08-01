@@ -31,6 +31,14 @@ namespace hijo {
 
     RenderTexture &GetRenderTexture() { return m_RenderTexture; }
 
+    int32_t ScreenWidth() {
+      return m_ScreenWidth;
+    }
+
+    int32_t ScreenHeight() {
+      return m_ScreenHeight;
+    }
+    
     void System(System *system) {
       m_System = system;
     }

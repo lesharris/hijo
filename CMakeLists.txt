@@ -57,8 +57,8 @@ add_executable(${PROJECT_NAME}
     src/core/layers/GameLayerStack.cpp
     src/core/layers/GameLayerStack.h
     src/core/layers/GameLayer.h
-    src/layers/Sandbox.cpp
-    src/layers/Sandbox.h
+    src/layers/Emu.cpp
+    src/layers/Emu.h
     src/cpu/SharpSM83.cpp
     src/cpu/SharpSM83.h
     src/system/Gameboy.cpp
@@ -71,7 +71,7 @@ add_executable(${PROJECT_NAME}
     src/external/imgui/imgui_tables.cpp
     src/external/imgui/imgui_widgets.cpp
     src/external/imgui/imgui.cpp src/layers/UI.cpp src/layers/UI.h
-    src/cpu/SharpSM83Opcodes.cpp src/external/imgui_extra/imgui_memory_editor.h)
+    src/cpu/SharpSM83Opcodes.cpp src/external/imgui_extra/imgui_memory_editor.h src/cartridge/Cartridge.cpp src/cartridge/Cartridge.h src/cpu/Interrupts.cpp src/cpu/Interrupts.h src/display/LCD.cpp src/display/LCD.h src/display/PPU.cpp src/display/PPU.h)
 
 # Compile Options
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)

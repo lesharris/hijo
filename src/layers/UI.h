@@ -53,7 +53,10 @@ namespace hijo {
 
     bool m_ShowDemo = true;
     bool m_ShowEmu = true;
-    bool m_ShowMemEditor = true;
+    bool m_ShowRom = true;
+    bool m_ShowWorkRam = true;
+    bool m_ShowHighRam = true;
+    bool m_ShowVRAM = true;
     bool m_ShowDisassembly = true;
     bool m_ShowRegisters = true;
 
@@ -64,6 +67,12 @@ namespace hijo {
     int32_t m_PrevScreenHeight;
 
     uint16_t m_PrevPC;
+
+    struct RegItem {
+      std::string label;
+      uint16_t value;
+      bool wide = false;
+    };
   };
 
 } // hijo

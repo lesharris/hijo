@@ -1747,6 +1747,7 @@ namespace hijo {
         },
         {0x18, "JR i8",             AddressingMode::Relative,           2, 12,
             [this]() {
+              regs.pc += 2;
               JR(static_cast<int8_t>(latch & 0xFF));
               return 0;
             }
@@ -1815,8 +1816,9 @@ namespace hijo {
         },
         {0x20, "JR NZ, i8",         AddressingMode::Relative,           2, 12,
             [this]() {
-              if (Zero() == 0) {
-                regs.pc += 2;
+              regs.pc += 2;
+
+              if (Zero()) {
                 return -4;
               }
 
@@ -1903,8 +1905,8 @@ namespace hijo {
         },
         {0x28, "JR Z, i8",          AddressingMode::Relative,           2, 12,
             [this]() {
-              if (Zero() != 0) {
-                regs.pc += 2;
+              regs.pc += 2;
+              if (!Zero()) {
                 return -4;
               }
 
@@ -1967,8 +1969,8 @@ namespace hijo {
         },
         {0x30, "JR NC, i8",         AddressingMode::Relative,           2, 12,
             [this]() {
+              regs.pc += 2;
               if (Carry()) {
-                regs.pc += 2;
                 return -4;
               }
 
@@ -2030,8 +2032,8 @@ namespace hijo {
         },
         {0x38, "JR C, i8",          AddressingMode::Relative,           2, 12,
             [this]() {
-              if (Carry() == 0) {
-                regs.pc += 2;
+              regs.pc += 2;
+              if (!Carry()) {
                 return -4;
               }
 
@@ -2996,8 +2998,9 @@ namespace hijo {
         },
         {0xC0, "RET NZ",            AddressingMode::Implied,            1, 20,
             [this]() {
-              if (Zero() == 0) {
-                regs.pc += 1;
+              regs.pc += 1;
+
+              if (Zero()) {
                 return -12;
               }
 
@@ -3014,8 +3017,9 @@ namespace hijo {
         },
         {0xC2, "JP NZ, u16",        AddressingMode::Extended,           3, 16,
             [this]() {
-              if (Zero() == 0) {
-                regs.pc += 3;
+              regs.pc += 3;
+
+              if (Zero()) {
                 return -4;
               }
 
@@ -3025,6 +3029,7 @@ namespace hijo {
         },
         {0xC3, "JP u16",            AddressingMode::Extended,           3, 16,
             [this]() {
+              regs.pc += 3;
               JP(latch);
               return 0;
             }
@@ -3033,7 +3038,7 @@ namespace hijo {
             [this]() {
               regs.pc += 3;
 
-              if (Zero() == 0) {
+              if (Zero()) {
                 return -12;
               }
 
@@ -3064,8 +3069,9 @@ namespace hijo {
         },
         {0xC8, "RET Z",             AddressingMode::Implied,            1, 20,
             [this]() {
-              if (Zero() != 0) {
-                regs.pc += 1;
+              regs.pc += 1;
+
+              if (!Zero()) {
                 return -12;
               }
 
@@ -3075,14 +3081,16 @@ namespace hijo {
         },
         {0xC9, "RET",               AddressingMode::Implied,            1, 16,
             [this]() {
+              regs.pc += 1;
               RET();
               return 0;
             }
         },
         {0xCA, "JP Z, u16",         AddressingMode::Extended,           3, 16,
             [this]() {
-              if (Zero() != 0) {
-                regs.pc += 3;
+              regs.pc += 3;
+
+              if (!Zero()) {
                 return -4;
               }
 
@@ -3102,7 +3110,7 @@ namespace hijo {
             [this]() {
               regs.pc += 3;
 
-              if (Zero() != 0) {
+              if (!Zero()) {
                 return -12;
               }
 
@@ -3134,8 +3142,9 @@ namespace hijo {
         },
         {0xD0, "RET NC",            AddressingMode::Implied,            1, 20,
             [this]() {
-              if (Zero() == 0) {
-                regs.pc += 1;
+              regs.pc += 1;
+
+              if (Carry()) {
                 return -12;
               }
 
@@ -3152,8 +3161,9 @@ namespace hijo {
         },
         {0xD2, "JP NC, u16",        AddressingMode::Extended,           3, 16,
             [this]() {
+              regs.pc += 3;
+
               if (Carry()) {
-                regs.pc += 3;
                 return -4;
               }
 
@@ -3202,7 +3212,7 @@ namespace hijo {
         },
         {0xD8, "RET C",             AddressingMode::Implied,            1, 20,
             [this]() {
-              if (Carry() == 0) {
+              if (!Carry()) {
                 regs.pc += 1;
                 return -12;
               }
@@ -3213,6 +3223,7 @@ namespace hijo {
         },
         {0xD9, "RETI",              AddressingMode::Implied,            1, 16,
             [this]() {
+              regs.pc += 1;
               m_InterruptsEnabled = true;
               RET();
               return 0;
@@ -3220,8 +3231,9 @@ namespace hijo {
         },
         {0xDA, "JP C, u16",         AddressingMode::Extended,           3, 16,
             [this]() {
-              if (Carry() == 0) {
-                regs.pc += 3;
+              regs.pc += 3;
+
+              if (!Carry()) {
                 return -4;
               }
 
@@ -3239,7 +3251,7 @@ namespace hijo {
             [this]() {
               regs.pc += 3;
 
-              if (Carry() == 0) {
+              if (!Carry()) {
                 return -12;
               }
 
@@ -3330,6 +3342,7 @@ namespace hijo {
         },
         {0xE9, "JP HL",             AddressingMode::Implied,            1, 4,
             [this]() {
+              regs.pc += 1;
               JP(regs.hl);
               return 0;
             }
@@ -3459,7 +3472,7 @@ namespace hijo {
         },
         {0xFB, "EI",                AddressingMode::Implied,            1, 4,
             [this]() {
-              m_InterruptsEnabled = true;
+              m_EnablingInterrupts = true;
               regs.pc += 1;
               return 0;
             }
@@ -3492,10 +3505,5 @@ namespace hijo {
         },
     };
   }
-
-  /*****************************************
-   * Opcode Functions
-   * i.e; the things that Do Stuff
-   *****************************************/
-
+  
 }
