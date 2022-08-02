@@ -74,6 +74,11 @@ add_executable(${PROJECT_NAME}
     src/external/imgui_extra/imgui_memory_editor.h
     src/cartridge/Cartridge.cpp
     src/cartridge/Cartridge.h
+    src/common/common.cpp
+    src/cpu/Instructions.cpp
+    src/cpu/Instructions.h
+    src/cpu/SharpSM83.cpp
+    src/cpu/SharpSM83.h
     src/cpu/Interrupts.cpp
     src/cpu/Interrupts.h
     src/display/LCD.cpp
@@ -85,8 +90,7 @@ add_executable(${PROJECT_NAME}
     src/cpu/DMA.cpp
     src/cpu/DMA.h
     src/cpu/Stack.cpp
-    src/cpu/Stack.h
-    src/common/common.cpp src/cpu/Instructions.cpp src/cpu/Instructions.h src/cpu/SharpSM83.cpp src/cpu/SharpSM83.h)
+    src/cpu/Stack.h)
 
 # Compile Options
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)

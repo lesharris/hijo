@@ -30,7 +30,13 @@ namespace hijo {
   public:
     void cpuWrite(uint16_t addr, uint8_t data) override;
 
+    void cpuWrite16(uint16_t addr, uint16_t value);
+
     uint8_t cpuRead(uint16_t addr, bool readOnly = false) override;
+
+    uint16_t cpuRead16(uint16_t addr);
+
+    void Cycles(uint32_t cycles);
 
   public:
     void Update(double timestep) override;
@@ -70,6 +76,8 @@ namespace hijo {
     friend class Stack;
 
     friend class Hijo;
+
+    friend class SharpSM83;
 
   private:
     bool m_Run = false;

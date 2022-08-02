@@ -16,7 +16,7 @@ namespace hijo {
 
     uint8_t Read(uint16_t address);
 
-  private:
+  public:
     uint16_t div;
     uint8_t tima;
     uint8_t tma;

@@ -4,7 +4,8 @@
 namespace hijo {
   void Interrupts::RequestInterrupt(SharpSM83 &cpu, const Interrupts::Interrupt &type) {
     uint8_t it = static_cast<uint8_t>(type);
-    cpu.m_IntFlags |= it;
+    uint8_t flags = cpu.IntFlags();
+    cpu.IntFlags(flags | it);
   }
 
   void Interrupts::HandleInterrupts(SharpSM83 &cpu) {
@@ -23,11 +24,12 @@ namespace hijo {
   bool Interrupts::CheckInterrupt(SharpSM83 &cpu, uint16_t addr, const Interrupts::Interrupt &interrupt) {
     uint8_t it = static_cast<uint8_t>(interrupt);
 
-    if (cpu.m_IntFlags & it && cpu.m_IE & it) {
+    if (cpu.IntFlags() & it && cpu.IERegister() & it) {
       HandleInterrupt(cpu, addr);
-      cpu.m_IntFlags &= ~it;
-      cpu.m_Halted = false;
-      cpu.m_InterruptsEnabled = false;
+      uint8_t flags = cpu.IntFlags();
+      cpu.IntFlags(flags & ~it);
+      cpu.halted = false;
+      cpu.int_master_enabled = false;
 
       return true;
     }

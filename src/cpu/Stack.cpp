@@ -5,7 +5,7 @@
 namespace hijo {
   void Stack::Push(uint8_t data) {
     auto &bus = Gameboy::Get();
-    auto &regs = bus.m_Cpu.GetRegisters();
+    auto &regs = bus.m_Cpu.regs;
 
     regs.sp--;
     bus.cpuWrite(regs.sp, data);
@@ -18,7 +18,7 @@ namespace hijo {
 
   uint8_t Stack::Pop() {
     auto &bus = Gameboy::Get();
-    auto &regs = bus.m_Cpu.GetRegisters();
+    auto &regs = bus.m_Cpu.regs;
 
     return bus.cpuRead(regs.sp--);
   }

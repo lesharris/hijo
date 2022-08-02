@@ -11,7 +11,7 @@ namespace hijo {
 
     app.System(this);
 
-    m_Cpu.ConnectBus(this);
+    //m_Cpu.ConnectBus(this);
 
     memset(m_ExtRam, 0, 1024 * 8);
     memset(m_WorkRam, 0, 1024 * 8);
@@ -113,7 +113,7 @@ namespace hijo {
           break;
       }
     } else if (addr == 0xFFFF) {
-      m_Cpu.InterruptEnable(data);
+      m_Cpu.IERegister(data);
     }
   }
 
@@ -171,7 +171,7 @@ namespace hijo {
     } else if (addr >= 0xFF80 && addr < 0xFFFF) {
       return m_HighRam[addr & 0x7F];
     } else if (addr == 0xFFFF) {
-      return m_Cpu.InterruptEnable();
+      return m_Cpu.IERegister();
     }
   }
 
@@ -181,24 +181,13 @@ namespace hijo {
     // 70224 tcycles per frame
 
     if (m_Run) {
-      for (auto cycle = 0; cycle < 70224; cycle++) {
-
-        if (m_TargetActive && m_Cpu.GetRegisters().pc == m_TargetAddr) {
-          m_TargetActive = false;
-          m_Run = false;
-          return;
-        }
-
-        m_Cpu.Cycle(1);
-        m_CycleCount += 1;
-
-        for (auto n = 0; n < 4; n++) {
-          m_Timer.Tick();
-          m_PPU.Tick();
-        }
-
-        m_DMA.Tick();
+      if (m_TargetActive && m_Cpu.regs.pc == m_TargetAddr) {
+        m_TargetActive = false;
+        m_Run = false;
+        return;
       }
+
+      m_Cpu.Step();
     }
   }
 
@@ -207,12 +196,12 @@ namespace hijo {
   }
 
   void Gameboy::HandleCPUStep(const Events::StepCPU &) {
-    auto cycles = m_Cpu.Step();
+    //auto cycles = m_Cpu.Step();
 
-    for (auto n = 0; n < 4; n++)
-      m_PPU.Tick();
+    // for (auto n = 0; n < 4; n++)
+    //  m_PPU.Tick();
 
-    m_CycleCount += cycles;
+    //m_CycleCount += cycles;
   }
 
   void Gameboy::InsertCartridge(const std::string &path) {
@@ -223,6 +212,30 @@ namespace hijo {
     m_TargetAddr = event.addr;
     m_Run = true;
     m_TargetActive = true;
+  }
+
+  void Gameboy::Cycles(uint32_t cycles) {
+    for (auto i = 0; i < cycles; i++) {
+      for (auto n = 0; n < 4; n++) {
+        m_CycleCount++;
+        m_Timer.Tick();
+        m_PPU.Tick();
+      }
+
+      m_DMA.Tick();
+    }
+  }
+
+  void Gameboy::cpuWrite16(uint16_t addr, uint16_t value) {
+    cpuWrite(addr + 1, (value >> 8) & 0xFF);
+    cpuWrite(addr, value & 0xFF);
+  }
+
+  uint16_t Gameboy::cpuRead16(uint16_t addr) {
+    uint16_t low = cpuRead(addr);
+    uint16_t high = cpuRead(addr + 1);
+
+    return low | (high << 8);
   }
 
 } // hijo
