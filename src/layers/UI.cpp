@@ -159,7 +159,7 @@ namespace hijo {
     }
 
     if (m_ShowDisassembly) {
-      Disassembly();
+      // Disassembly();
     }
 
     if (m_ShowRegisters) {
