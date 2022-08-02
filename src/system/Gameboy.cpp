@@ -64,16 +64,23 @@ namespace hijo {
       m_WorkRam[addr & 0x1FFF] = data;
     } else if (addr >= 0xFE00 && addr < 0xFEA0) {
       // OAM
+
+      if (m_DMA.Transferring()) {
+        return;
+      }
+
+      m_PPU.OAMWrite(addr, data);
     } else if (addr >= 0xFEA0 && addr < 0xFF00) {
       // Unusable
     } else if (addr >= 0xFF00 && addr < 0xFF80) {
       switch (addr) {
-        case 0xFF00:  // Gamepad
-          // Set
+        case 0xFF00:
           break;
 
         case 0xFF01:
           m_Serial[0] = data;
+          m_Buffer.push_back((char) m_Serial[0]);
+          spdlog::get("console")->info("\n{}", m_Buffer);
           break;
 
         case 0xFF02:
@@ -84,11 +91,11 @@ namespace hijo {
         case 0xFF05:
         case 0xFF06:
         case 0xFF07:
-          // Timer Write
+          m_Timer.Write(addr, data);
           break;
 
         case 0xFF0F:
-          m_Cpu.GetRegisters().ie = data;
+          m_Cpu.IntFlags(data);
           break;
 
         default:
@@ -99,11 +106,14 @@ namespace hijo {
           if (addr >= 0xFF40 && addr <= 0xFF4B) {
             LCD::Get().Write(addr, data);
           }
+
+          if (addr >= 0xFF80 && addr < 0xFFFF) {
+            m_HighRam[addr & 0x7F] = data;
+          }
+          break;
       }
-    } else if (addr >= 0xFF80 && addr < 0xFFFF) {
-      m_HighRam[addr & 0x7F] = data;
-    } else {
-      m_Cpu.GetRegisters().ie = data;
+    } else if (addr == 0xFFFF) {
+      m_Cpu.InterruptEnable(data);
     }
   }
 
@@ -118,7 +128,11 @@ namespace hijo {
       return m_WorkRam[addr & 0x1FFF];
     } else if (addr >= 0xFE00 && addr < 0xFEA0) {
       // OAM
-      return 0;
+      if (m_DMA.Transferring()) {
+        return 0xFF;
+      }
+
+      return m_PPU.OAMRead(addr);
     } else if (addr >= 0xFEA0 && addr < 0xFF00) {
       // Unusable
       return 0;
@@ -137,10 +151,10 @@ namespace hijo {
         case 0xFF05:
         case 0xFF06:
         case 0xFF07:
-          return 0;  // Timer
+          return m_Timer.Read(addr);
 
         case 0xFF0F:
-          return m_Cpu.GetRegisters().ie;
+          return m_Cpu.IntFlags();
 
         default:
           if (addr >= 0xFF10 && addr <= 0xFF3F) {
@@ -152,13 +166,12 @@ namespace hijo {
             return LCD::Get().Read(addr);
           }
       }
-
       // Notify?
       return 0;
     } else if (addr >= 0xFF80 && addr < 0xFFFF) {
       return m_HighRam[addr & 0x7F];
-    } else {
-      return m_Cpu.GetRegisters().ie;
+    } else if (addr == 0xFFFF) {
+      return m_Cpu.InterruptEnable();
     }
   }
 
@@ -180,8 +193,11 @@ namespace hijo {
         m_CycleCount += 1;
 
         for (auto n = 0; n < 4; n++) {
+          m_Timer.Tick();
           m_PPU.Tick();
         }
+
+        m_DMA.Tick();
       }
     }
   }

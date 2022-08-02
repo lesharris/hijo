@@ -59,56 +59,38 @@ namespace hijo {
     Registers &Regs();
 
   public:
-    bool LCDCEnableBGW();
+    bool LCDC_BGWEnabled();
 
-    bool LCDCEnableOBJ();
+    bool LCDC_OBJEnabled();
 
-    uint8_t LCDCObjHeight();
+    uint8_t LCDC_ObjHeight();
 
-    uint16_t LCDCBGMapArea();
+    uint16_t LCDC_BGMapArea();
 
-    uint16_t LCDBGWDataArea();
+    uint16_t LCDC_BGWDataArea();
 
-    bool LCDCWinEnable();
+    bool LCDC_WinEnable();
 
-    uint16_t LCDCWinMapArea();
+    uint16_t LCDC_WinMapArea();
 
-    bool LCDCEnable();
-
-  public:
-    Mode LCDSMode();
-
-    void LCDSSetMode(const Mode &mode);
-
-    bool LCDSLYC();
-
-    void LCDSLYCSet(bool isSet);
+    bool LCDC_Enabled();
 
   public:
-    uint8_t LCDSStatInt(StatSrc src);
+    Mode LCDS_Mode();
+
+    void LCDS_SetMode(const Mode &mode);
+
+    bool LCDS_LYC();
+
+    void LCDS_LYCSet(bool isSet);
+
+  public:
+    uint8_t LCDS_StatInt(StatSrc src);
 
   public:
     void Reset();
-
+    
   private:
-    uint8_t bitmasks[8] = {
-        0b00000001,
-        0b00000010,
-        0b00000100,
-        0b00001000,
-        0b00010000,
-        0b00100000,
-        0b01000000,
-        0b10000000
-    };
-
-  private:
-    bool GetLCDCBit(uint8_t bit);
-
-    bool GetLCDSBit(uint8_t bit);
-
-    void SetLCDSBit(uint8_t bit, bool isSet);
-
     void PaletteUpdate(uint8_t data, uint8_t palette);
 
   private:

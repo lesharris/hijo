@@ -815,7 +815,7 @@ namespace hijo {
         },
         {0x86, "RES 0, (HL)",
             [this]() {
-              RES(0, bus->cpuRead(regs.hl));
+              RES(0, regs.hl);
               return 0;
             }
         },
@@ -863,7 +863,7 @@ namespace hijo {
         },
         {0x8E, "RES 1, (HL)",
             [this]() {
-              RES(1, bus->cpuRead(regs.hl));
+              RES(1, regs.hl);
               return 0;
             }
         },
@@ -911,7 +911,7 @@ namespace hijo {
         },
         {0x96, "RES 2, (HL)",
             [this]() {
-              RES(2, bus->cpuRead(regs.hl));
+              RES(2, regs.hl);
               return 0;
             }
         },
@@ -959,7 +959,7 @@ namespace hijo {
         },
         {0x9E, "RES 3, (HL)",
             [this]() {
-              RES(3, bus->cpuRead(regs.hl));
+              RES(3, regs.hl);
               return 0;
             }
         },
@@ -1007,7 +1007,7 @@ namespace hijo {
         },
         {0xA6, "RES 4, (HL)",
             [this]() {
-              RES(4, bus->cpuRead(regs.hl));
+              RES(4, regs.hl);
               return 0;
             }
         },
@@ -1055,7 +1055,7 @@ namespace hijo {
         },
         {0xAE, "RES 5, (HL)",
             [this]() {
-              RES(5, bus->cpuRead(regs.hl));
+              RES(5, regs.hl);
               return 0;
             }
         },
@@ -1103,7 +1103,7 @@ namespace hijo {
         },
         {0xB6, "RES 6, (HL)",
             [this]() {
-              RES(6, bus->cpuRead(regs.hl));
+              RES(6, regs.hl);
               return 0;
             }
         },
@@ -1151,7 +1151,7 @@ namespace hijo {
         },
         {0xBE, "RES 7, (HL)",
             [this]() {
-              RES(7, bus->cpuRead(regs.hl));
+              RES(7, regs.hl);
               return 0;
             }
         },
@@ -1199,7 +1199,7 @@ namespace hijo {
         },
         {0xC6, "SET 0, (HL)",
             [this]() {
-              SET(0, bus->cpuRead(regs.hl));
+              SET(0, regs.hl);
               return 0;
             }
         },
@@ -1247,7 +1247,7 @@ namespace hijo {
         },
         {0xCE, "SET 1, (HL)",
             [this]() {
-              SET(1, bus->cpuRead(regs.hl));
+              SET(1, regs.hl);
               return 0;
             }
         },
@@ -1295,7 +1295,7 @@ namespace hijo {
         },
         {0xD6, "SET 2, (HL)",
             [this]() {
-              SET(2, bus->cpuRead(regs.hl));
+              SET(2, regs.hl);
               return 0;
             }
         },
@@ -1343,7 +1343,7 @@ namespace hijo {
         },
         {0xDE, "SET 3, (HL)",
             [this]() {
-              SET(3, bus->cpuRead(regs.hl));
+              SET(3, regs.hl);
               return 0;
             }
         },
@@ -1391,7 +1391,7 @@ namespace hijo {
         },
         {0xE6, "SET 4, (HL)",
             [this]() {
-              SET(4, bus->cpuRead(regs.hl));
+              SET(4, regs.hl);
               return 0;
             }
         },
@@ -1439,7 +1439,7 @@ namespace hijo {
         },
         {0xEE, "SET 5, (HL)",
             [this]() {
-              SET(5, bus->cpuRead(regs.hl));
+              SET(5, regs.hl);
               return 0;
             }
         },
@@ -1487,7 +1487,7 @@ namespace hijo {
         },
         {0xF6, "SET 6, (HL)",
             [this]() {
-              SET(6, bus->cpuRead(regs.hl));
+              SET(6, regs.hl);
               return 0;
             }
         },
@@ -1535,7 +1535,7 @@ namespace hijo {
         },
         {0xFE, "SET 7, (HL)",
             [this]() {
-              SET(7, bus->cpuRead(regs.hl));
+              SET(7, regs.hl);
               return 0;
             }
         },
@@ -1600,13 +1600,7 @@ namespace hijo {
         },
         {0x7,  "RLCA",              AddressingMode::Implied,            1, 4,
             [this]() {
-              uint16_t res =
-                  (regs.a << 1) | Carry();
-              ClearZero();
-              ClearNegative();
-              ClearHalfCarry();
-              SetCarry(res);
-              regs.a = res & 0xFF;
+              RLCA();
 
               regs.pc += 1;
               return 0;
@@ -1664,20 +1658,7 @@ namespace hijo {
         },
         {0xF,  "RRCA",              AddressingMode::Implied,            1, 4,
             [this]() {
-              uint8_t low = regs.a & 1;
-              uint16_t res =
-                  (regs.a >> 1) | (low << 7);
-
-              ClearZero();
-              ClearHalfCarry();
-              ClearNegative();
-              if (low) {
-                SetCarry();
-              } else {
-                ClearCarry();
-              }
-
-              regs.c = res & 0xFF;
+              RRCA();
               regs.pc += 1;
               return 0;
             }
@@ -1704,7 +1685,7 @@ namespace hijo {
         },
         {0x13, "INC DE",            AddressingMode::Implied,            1, 8,
             [this]() {
-              DEC(Register::DE);
+              INC(Register::DE);
               regs.pc += 1;
               return 0;
             }
@@ -1733,14 +1714,7 @@ namespace hijo {
         },
         {0x17, "RLA",               AddressingMode::Implied,            1, 4,
             [this]() {
-              int wide =
-                  (regs.a << 1) | Carry();
-
-              ClearNegative();
-              ClearHalfCarry();
-              ClearZero();
-              SetCarry(wide);
-
+              RLA();
               regs.pc += 1;
               return 0;
             }
@@ -1797,19 +1771,7 @@ namespace hijo {
         },
         {0x1F, "RRA",               AddressingMode::Implied,            1, 4,
             [this]() {
-              uint8_t low = regs.a & 1;
-              regs.a =
-                  ((regs.a >> 1) | Carry()) << 7;
-
-              ClearZero();
-              ClearNegative();
-              ClearHalfCarry();
-
-              if (low) {
-                SetCarry();
-              } else {
-                ClearCarry();
-              }
+              RRA();
               regs.pc += 1;
               return 0;
             },
@@ -1835,7 +1797,8 @@ namespace hijo {
         },
         {0x22, "LD (HL+), A",       AddressingMode::RegisterIndirectHL, 1, 8,
             [this]() {
-              LD(regs.hl++, regs.a);
+              LD(regs.hl, regs.a);
+              regs.hl++;
               regs.pc += 1;
               return 0;
             }
@@ -1871,34 +1834,7 @@ namespace hijo {
         },
         {0x27, "DAA",               AddressingMode::Implied,            1, 4,
             [this]() {
-              if (Negative() != 0) {
-                if (HalfCarry() != 0) {
-                  regs.a += 0xFA;
-                }
-                if (Carry()) {
-                  regs.a += 0xA0;
-                }
-              } else {
-                uint32_t a = regs.a;
-
-                if ((regs.a & 0xF) > 0x9 ||
-                    HalfCarry()) {
-                  a += 0x6;
-                }
-
-                if ((a & 0x1F0) > 0x90 ||
-                    Carry()) {
-                  a += 0x60;
-                  SetCarry();
-                } else {
-                  ClearCarry();
-                }
-
-                regs.a = (uint8_t) (a & 0xFF);
-              }
-
-              ClearHalfCarry();
-              SetZero(!regs.a);
+              DAA();
               regs.pc += 1;
               return 0;
             }
@@ -1923,7 +1859,8 @@ namespace hijo {
         },
         {0x2A, "LD A, (HL+)",       AddressingMode::RegisterIndirectHL, 1, 8,
             [this]() {
-              LD(Register::A, bus->cpuRead(regs.hl++));
+              LD(Register::A, bus->cpuRead(regs.hl));
+              regs.hl++;
               regs.pc += 1;
               return 0;
             },
@@ -1960,7 +1897,7 @@ namespace hijo {
 
         {0x2F, "CPL",               AddressingMode::Implied,            1, 4,
             [this]() {
-              regs.a ^= 0xFF;
+              regs.a = ~regs.a;
               SetHalfCarry();
               SetNegative();
               regs.pc += 1;
@@ -1987,7 +1924,8 @@ namespace hijo {
         },
         {0x32, "LD (HL-), A",       AddressingMode::RegisterIndirectHL, 1, 8,
             [this]() {
-              LD(regs.hl--, regs.a);
+              LD(regs.hl, regs.a);
+              regs.hl--;
               regs.pc += 1;
               return 0;
             }
@@ -2013,7 +1951,7 @@ namespace hijo {
               return 0;
             }
         },
-        {0x36, "LD (HL), u8",       AddressingMode::RegisterIndirectHL, 2, 12,
+        {0x36, "LD (HL), u8",       AddressingMode::Immediate,          2, 12,
             [this]() {
               LD(regs.hl,
                  static_cast<uint8_t>(latch & 0xFF));
@@ -2050,7 +1988,8 @@ namespace hijo {
         },
         {0x3A, "LD A, (HL-)",       AddressingMode::RegisterIndirectHL, 1, 8,
             [this]() {
-              LD(Register::A, bus->cpuRead(regs.hl--));
+              LD(Register::A, bus->cpuRead(regs.hl));
+              regs.hl--;
               regs.pc += 1;
               return 0;
             },
@@ -2089,10 +2028,10 @@ namespace hijo {
               ClearNegative();
               ClearHalfCarry();
 
-              if (Carry()) {
-                ClearCarry();
-              } else {
+              if (Carry() ^ 1) {
                 SetCarry();
+              } else {
+                ClearCarry();
               }
               regs.pc += 1;
               return 0;
@@ -2437,7 +2376,7 @@ namespace hijo {
         {
          0x70, "LD (HL), B",        AddressingMode::RegisterIndirectHL, 1, 8,
             [this]() {
-              LD(latch, regs.b);
+              LD(regs.hl, regs.b);
               regs.pc += 1;
               return 0;
             }
@@ -2445,35 +2384,35 @@ namespace hijo {
         {
          0x71, "LD (HL), C",        AddressingMode::RegisterIndirectHL, 1, 8,
             [this]() {
-              LD(latch, regs.c);
+              LD(regs.hl, regs.c);
               regs.pc += 1;
               return 0;
             }
         },
         {0x72, "LD (HL), D",        AddressingMode::RegisterIndirectHL, 1, 8,
             [this]() {
-              LD(latch, regs.d);
+              LD(regs.hl, regs.d);
               regs.pc += 1;
               return 0;
             }
         },
         {0x73, "LD (HL), E",        AddressingMode::RegisterIndirectHL, 1, 8,
             [this]() {
-              LD(latch, regs.e);
+              LD(regs.hl, regs.e);
               regs.pc += 1;
               return 0;
             }
         },
         {0x74, "LD (HL), H",        AddressingMode::RegisterIndirectHL, 1, 8,
             [this]() {
-              LD(latch, regs.h);
+              LD(regs.hl, regs.h);
               regs.pc += 1;
               return 0;
             }
         },
         {0x75, "LD (HL), L",        AddressingMode::RegisterIndirectHL, 1, 8,
             [this]() {
-              LD(latch, regs.l);
+              LD(regs.hl, regs.l);
               regs.pc += 1;
               return 0;
             }
@@ -2487,7 +2426,7 @@ namespace hijo {
         },
         {0x77, "LD (HL), A",        AddressingMode::RegisterIndirectHL, 1, 8,
             [this]() {
-              LD(latch, regs.a);
+              LD(regs.hl, regs.a);
               regs.pc += 1;
               return 0;
             }
@@ -2550,42 +2489,42 @@ namespace hijo {
         },
         {0x80, "ADD A, B",          AddressingMode::Register,           1, 4,
             [this]() {
-              ADD(Register::A, Register::B);
+              ADD(regs.b);
               regs.pc += 1;
               return 0;
             }
         },
         {0x81, "ADD A, C",          AddressingMode::Register,           1, 4,
             [this]() {
-              ADD(Register::A, Register::C);
+              ADD(regs.c);
               regs.pc += 1;
               return 0;
             }
         },
         {0x82, "ADD A, D",          AddressingMode::Register,           1, 4,
             [this]() {
-              ADD(Register::A, Register::D);
+              ADD(regs.d);
               regs.pc += 1;
               return 0;
             }
         },
         {0x83, "ADD A, E",          AddressingMode::Register,           1, 4,
             [this]() {
-              ADD(Register::A, Register::E);
+              ADD(regs.e);
               regs.pc += 1;
               return 0;
             }
         },
         {0x84, "ADD A, H",          AddressingMode::Register,           1, 4,
             [this]() {
-              ADD(Register::A, Register::H);
+              ADD(regs.h);
               regs.pc += 1;
               return 0;
             }
         },
         {0x85, "ADD A, L",          AddressingMode::Register,           1, 4,
             [this]() {
-              ADD(Register::A, Register::L);
+              ADD(regs.l);
               regs.pc += 1;
               return 0;
             }
@@ -2599,7 +2538,7 @@ namespace hijo {
         },
         {0x87, "ADD A, A",          AddressingMode::Register,           1, 4,
             [this]() {
-              ADD(Register::A, Register::A);
+              ADD(regs.a);
               regs.pc += 1;
               return 0;
             }
@@ -3212,8 +3151,9 @@ namespace hijo {
         },
         {0xD8, "RET C",             AddressingMode::Implied,            1, 20,
             [this]() {
+              regs.pc += 1;
+
               if (!Carry()) {
-                regs.pc += 1;
                 return -12;
               }
 
@@ -3247,7 +3187,7 @@ namespace hijo {
               return 0;
             }
         },
-        {0xDC, "CALL C, u16",       AddressingMode::Implied,            3, 24,
+        {0xDC, "CALL C, u16",       AddressingMode::Extended,           3, 24,
             [this]() {
               regs.pc += 3;
 
@@ -3372,7 +3312,7 @@ namespace hijo {
               return 0;
             }
         },
-        {0xEE, "XOR",               AddressingMode::Immediate,          2, 8,
+        {0xEE, "XOR, u8",           AddressingMode::Immediate,          2, 8,
             [this]() {
               XOR(static_cast<uint8_t>(latch & 0xFF));
               regs.pc += 2;
@@ -3443,14 +3383,27 @@ namespace hijo {
         },
         {0xF8, "LD HL, SP + i8",    AddressingMode::Immediate,          2, 12,
             [this]() {
-              int32_t offset = regs.sp + static_cast<int8_t>(latch & 0xFF);
+              uint16_t addr = regs.sp + static_cast<int8_t>(latch & 0xFF);
 
-              LD(Register::HL, static_cast<uint16_t>(offset));
+              uint8_t hflag = (regs.sp & 0xF) + ((latch & 0xFF) & 0xF) >= 0x10;
+              uint8_t cflag = (regs.sp & 0xFF) + (latch & 0xFF) >= 0x100;
 
               ClearZero();
               ClearNegative();
-              SetHalfCarry(regs.hl);
-              SetCarry(regs.hl);
+
+              if (hflag) {
+                SetHalfCarry();
+              } else {
+                ClearHalfCarry();
+              }
+
+              if (cflag) {
+                SetCarry();
+              } else {
+                ClearCarry();
+              }
+
+              LD(Register::HL, addr);
 
               regs.pc += 2;
               return 0;
@@ -3505,5 +3458,5 @@ namespace hijo {
         },
     };
   }
-  
+
 }

@@ -40,6 +40,8 @@ namespace hijo {
 
     void Registers();
 
+    void Tiles();
+
   private:
     ImVec2 GetLargestSizeForViewport();
 
@@ -57,6 +59,7 @@ namespace hijo {
     bool m_ShowWorkRam = true;
     bool m_ShowHighRam = true;
     bool m_ShowVRAM = true;
+    bool m_ShowTiles = true;
     bool m_ShowDisassembly = true;
     bool m_ShowRegisters = true;
 

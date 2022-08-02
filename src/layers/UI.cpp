@@ -118,6 +118,7 @@ namespace hijo {
         ImGui::MenuItem("ROM Viewer", NULL, &m_ShowRom);
         ImGui::MenuItem("Work RAM Viewer", NULL, &m_ShowWorkRam);
         ImGui::MenuItem("High RAM Viewer", NULL, &m_ShowHighRam);
+        ImGui::MenuItem("VRAM Viewer", NULL, &m_ShowVRAM);
         ImGui::MenuItem("Disassembly", NULL, &m_ShowDisassembly);
         ImGui::Separator();
         ImGui::MenuItem("ImGui Demo", NULL, &m_ShowDemo);
@@ -167,6 +168,10 @@ namespace hijo {
 
     if (m_ShowDemo) {
       ImGui::ShowDemoWindow(&m_ShowDemo);
+    }
+
+    if (m_ShowTiles) {
+      Tiles();
     }
 
     Viewport();
@@ -220,6 +225,21 @@ namespace hijo {
   /*
    * Windows
    */
+
+
+  void UI::Tiles() {
+    if (!ImGui::Begin("Tiles", &m_ShowTiles)) {
+      ImGui::End();
+    } else {
+      auto &texture = Hijo::Get().GetTileTexture();
+      ImGui::Image(reinterpret_cast<ImTextureID>((uint64_t) texture.texture.id),
+                   {static_cast<float>(texture.texture.width), static_cast<float>(texture.texture.height)},
+                   {0, 1}, {1, 0});
+
+      ImGui::End();
+    }
+  }
+
   void UI::Viewport() {
     static bool firstRun = true;
 
@@ -272,7 +292,7 @@ namespace hijo {
         m_PrevScreenHeight = windowHeight;
 
         firstRun = false;
-        
+
         EventManager::Dispatcher().enqueue<Events::ViewportResized>({size.x, size.y});
       } else {
         auto &texture = Hijo::Get().GetRenderTexture();
@@ -381,12 +401,6 @@ namespace hijo {
       bool H = cpu.HalfCarry();
       bool C = cpu.Carry();
 
-      bool VBlank = Interrupts::VBlank(cpu);
-      bool LCDStat = Interrupts::LCDStat(cpu);
-      bool Serial = Interrupts::Serial(cpu);
-      bool Timer = Interrupts::Timer(cpu);
-      bool Joypad = Interrupts::Joypad(cpu);
-
       bool MasterInterrupt = cpu.m_InterruptsEnabled;
 
       ImGui::BeginTable("flagsbtnscycles", 2);
@@ -443,8 +457,7 @@ namespace hijo {
           {"H",  regs.h},
           {"L",  regs.l},
           {"SP", regs.sp, true},
-          {"PC", regs.pc, true},
-          {"IE", regs.ie}
+          {"PC", regs.pc, true}
       };
 
       ImGui::BeginTable("regs", 4, ImGuiTableFlags_RowBg);
@@ -502,15 +515,13 @@ namespace hijo {
       ImGui::EndGroup();
       ImGui::Separator();
       ImGui::Checkbox("Master Interrupt", &MasterInterrupt);
-      ImGui::Checkbox("VBlank", &VBlank);
-      ImGui::Checkbox("LCD Stat", &LCDStat);
-      ImGui::Checkbox("Timer", &Timer);
-      ImGui::Checkbox("Serial", &Serial);
-      ImGui::Checkbox("Joypad", &Joypad);
+      ImGui::TextUnformatted(fmt::format("IF: {:08b}", cpu.m_IntFlags).c_str());
+      ImGui::TextUnformatted(fmt::format("IE: {:08b}", cpu.m_IE).c_str());
 
       // Interrupts
 
       ImGui::End();
     }
   }
+
 } // hijo

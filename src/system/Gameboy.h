@@ -7,6 +7,8 @@
 #include "core/events/EventManager.h"
 
 #include "cpu/SharpSM83.h"
+#include "cpu/Timer.h"
+#include "cpu/DMA.h"
 #include "cartridge/Cartridge.h"
 #include "display/PPU.h"
 
@@ -59,6 +61,16 @@ namespace hijo {
 
     friend class PPU;
 
+    friend class Timer;
+
+    friend class DMA;
+
+    friend class LCD;
+
+    friend class Stack;
+
+    friend class Hijo;
+
   private:
     bool m_Run = false;
     uint64_t m_CycleCount = 0;
@@ -69,11 +81,15 @@ namespace hijo {
     uint8_t m_Serial[2];
 
     SharpSM83 m_Cpu;
+    Timer m_Timer;
     PPU m_PPU;
+    DMA m_DMA;
     std::shared_ptr<Cartridge> m_Cartridge;
 
     uint16_t m_TargetAddr = 0;
     bool m_TargetActive = false;
+
+    std::string m_Buffer;
   };
 
 } // hijo

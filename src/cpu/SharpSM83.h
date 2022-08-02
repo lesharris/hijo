@@ -78,7 +78,6 @@ namespace hijo {
     struct Registers {
       uint16_t pc;
       uint16_t sp;
-      uint8_t ie;
 
       struct {
         union {
@@ -205,6 +204,22 @@ namespace hijo {
       return regs;
     }
 
+    uint8_t IntFlags() {
+      return m_IntFlags;
+    }
+
+    void IntFlags(uint8_t value) {
+      m_IntFlags = value;
+    }
+
+    uint8_t InterruptEnable() {
+      return m_IE;
+    }
+
+    void InterruptEnable(uint8_t value) {
+      m_IE = value;
+    }
+
     void Disassemble(uint16_t start_addr, uint16_t end_addr);
 
     /*
@@ -295,11 +310,9 @@ namespace hijo {
      * Addressing Modes
      */
   private:
-    void ImpliedMode() {
-    }
+    void ImpliedMode() {}
 
-    void RegisterMode() {
-    }
+    void RegisterMode() {}
 
     uint8_t IMM(uint16_t addr) {
       return bus->cpuRead(addr + 1) & 0xFF;;
@@ -459,6 +472,16 @@ namespace hijo {
     void JP(uint16_t address);
 
     void RET();
+
+    void DAA();
+
+    void RLCA();
+
+    void RRCA();
+
+    void RLA();
+
+    void RRA();
 
     void POP(Register operand);
 
@@ -633,6 +656,8 @@ namespace hijo {
     bool m_Stopped = false;
     bool m_Halted = false;
 
+    uint8_t m_IE;
+    uint8_t m_IntFlags;
     bool m_InterruptsEnabled = true;
     bool m_EnablingInterrupts = false;
     std::vector<DisassemblyLine> m_Disassembly;

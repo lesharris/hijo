@@ -4,6 +4,7 @@
 #include <fmt/format.h>
 
 #include "Interrupts.h"
+#include "Stack.h"
 
 namespace hijo {
   SharpSM83::SharpSM83() {
@@ -18,7 +19,7 @@ namespace hijo {
 
   // Execute a fixed number of tcycles
   void SharpSM83::Cycle(uint32_t tcycles) {
-    if (!(m_Halted || m_Stopped)) {
+    if (!m_Halted) {
 
       uint32_t cycles = 0;
 
@@ -41,11 +42,8 @@ namespace hijo {
 
       } while (cycles < tcycles);
     } else {
-      if (regs.ie) {
+      if (m_IntFlags) {
         m_Halted = false;
-        m_Stopped = false;
-        if ((tcycles - 1) > 0)
-          Cycle(tcycles - 1);
       }
     }
 
@@ -105,7 +103,8 @@ namespace hijo {
     regs.pc = 0x100;
     regs.sp = 0xFFFE;
 
-    regs.ie = 0;
+    m_IE = 0;
+    m_IntFlags = 0;
     m_InterruptsEnabled = false;
     m_EnablingInterrupts = false;
   }
@@ -234,9 +233,19 @@ namespace hijo {
     auto incReg = [this](uint8_t *r) {
       uint16_t res = *r + 1;
 
-      SetZero(res & 0xFF);
+      if ((res & 0xFF) == 0) {
+        SetZero();
+      } else {
+        ClearZero();
+      }
+
       ClearNegative();
-      SetHalfCarry(res & 0xFF);
+
+      if ((res & 0x0F) == 0) {
+        SetHalfCarry();
+      } else {
+        ClearHalfCarry();
+      }
 
       *r = res & 0xFF;
     };
@@ -288,17 +297,42 @@ namespace hijo {
   }
 
   void SharpSM83::INC(uint16_t address) {
-    auto value = bus->cpuRead(address);
-    bus->cpuWrite(address, value + 1);
+    uint16_t res = bus->cpuRead(address) + 1;
+    bus->cpuWrite(address, res & 0xFF);
+
+    ClearNegative();
+
+    if ((res & 0xFF) == 0) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
+
+    if ((res & 0x0F) == 0) {
+      SetHalfCarry();
+    } else {
+      ClearHalfCarry();
+    }
+
   }
 
   void SharpSM83::DEC(SharpSM83::Register r) {
     auto decReg = [this](uint8_t *r) {
       uint16_t res = *r - 1;
 
-      SetZero(res & 0xFF);
+      if ((res & 0xFF) == 0) {
+        SetZero();
+      } else {
+        ClearZero();
+      }
+
       SetNegative();
-      SetHalfCarry(res & 0xFF);
+
+      if ((res & 0x0F) == 0x0F) {
+        SetHalfCarry();
+      } else {
+        ClearHalfCarry();
+      }
 
       *r = res & 0xFF;
     };
@@ -350,8 +384,22 @@ namespace hijo {
   }
 
   void SharpSM83::DEC(uint16_t address) {
-    auto value = bus->cpuRead(address);
-    bus->cpuWrite(address, value - 1);
+    uint16_t res = bus->cpuRead(address) - 1;
+    bus->cpuWrite(address, res);
+
+    SetNegative();
+
+    if (res == 0) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
+
+    if ((res & 0x0F) == 0x0F) {
+      SetHalfCarry();
+    } else {
+      ClearHalfCarry();
+    }
   }
 
   void SharpSM83::ADD(SharpSM83::Register target, SharpSM83::Register operand, bool isWide) {
@@ -388,11 +436,26 @@ namespace hijo {
 
       uint32_t res = *targetPtr + *opPtr;
 
+      int h = (*targetPtr & 0xFFF) + (*opPtr & 0xFFF) >= 0x1000;
+      int n = ((int) *targetPtr) + ((int) *opPtr);
+      int c = n >= 0x10000;
+
       ClearNegative();
-      SetHalfCarry(res);
-      SetCarry(res);
+
+      if (h) {
+        SetHalfCarry();
+      } else {
+        ClearHalfCarry();
+      }
+
+      if (c) {
+        SetCarry();
+      } else {
+        ClearCarry();
+      }
 
       *targetPtr = static_cast<uint16_t>(res & 0xFFFF);
+
     } else {
       auto targetPtr = RegToPointer(target);
       auto opPtr = RegToPointer(operand);
@@ -402,42 +465,125 @@ namespace hijo {
         return;
       }
 
-      uint16_t res = *targetPtr + *opPtr;
+      uint32_t res = *targetPtr + *opPtr;
+
+      int z = (res & 0xFF) == 0;
+      int h = (*targetPtr & 0xF) + (*opPtr & 0xF) >= 0x10;
+      int c = (int) (*targetPtr & 0xFF) + (int) (*opPtr & 0xFF) >= 0x100;
+
+      if (z) {
+        SetZero();
+      } else {
+        ClearZero();
+      }
 
       ClearNegative();
-      SetZero(res);
-      SetHalfCarry(res);
-      SetCarry(res);
+
+      if (h) {
+        SetHalfCarry();
+      } else {
+        ClearHalfCarry();
+      }
+
+      if (c) {
+        SetCarry();
+      } else {
+        ClearCarry();
+      }
 
       *targetPtr = static_cast<uint8_t>(res & 0xFF);
     }
   }
 
   void SharpSM83::ADD(SharpSM83::Register target, uint8_t data) {
-    auto opPtr = RegToPointer(target);
+    auto targetPtr = RegToPointer(target);
 
-    if (!opPtr) {
-      // todo handle this
+    if (targetPtr != nullptr) {
+      // Todo Handle this
       return;
     }
 
-    uint32_t res = *opPtr + data;
+    if (target == Register::SP) {
+      uint32_t res = regs.sp + (int8_t) data;;
 
-    ClearZero();
+      int h = (regs.sp & 0xF) + (data & 0xF) >= 0x10;
+      int c = (int) (regs.sp & 0xFF) + (int) (data & 0xFF) >= 0x100;
+
+      ClearZero();
+      ClearNegative();
+
+      if (h) {
+        SetHalfCarry();
+      } else {
+        ClearHalfCarry();
+      }
+
+      if (c) {
+        SetCarry();
+      } else {
+        ClearCarry();
+      }
+
+      regs.sp = res & 0xFFFF;
+
+      return;
+    }
+
+    uint16_t res = *targetPtr + data;
+
+    int z = (res & 0xFF) == 0;
+    int h = (*targetPtr & 0xF) + (data & 0xF) >= 0x10;
+    int c = (int) (*targetPtr & 0xFF) + (int) (data & 0xFF) >= 0x100;
+
+    if (z) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
+
     ClearNegative();
-    SetHalfCarry(res);
-    SetCarry(res);
 
-    *opPtr = (uint16_t) res;
+    if (h) {
+      SetHalfCarry();
+    } else {
+      ClearHalfCarry();
+    }
+
+    if (c) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
+
+    *targetPtr = static_cast<uint8_t>(res & 0xFF);
   }
 
   void SharpSM83::ADD(uint8_t data) {
     uint16_t res = regs.a + data;
 
-    SetZero(res & 0xFF);
+    int z = (res & 0xFF) == 0;
+    int h = (regs.a & 0xF) + (data & 0xF) >= 0x10;
+    int c = (int) (regs.a & 0xFF) + (int) (data & 0xFF) >= 0x100;
+
+    if (z) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
+
     ClearNegative();
-    SetHalfCarry(res & 0xFF);
-    SetCarry(res);
+
+    if (h) {
+      SetHalfCarry();
+    } else {
+      ClearHalfCarry();
+    }
+
+    if (c) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
 
     regs.a = static_cast<uint8_t>(res & 0xFF);
   }
@@ -454,14 +600,32 @@ namespace hijo {
   }
 
   void SharpSM83::ADC(uint8_t data) {
-    int32_t diff = regs.a + data + Carry();
+
+    uint16_t u = data;
+    uint16_t a = regs.a;
+    uint16_t c = Carry();
+
+    regs.a = (a + u + c) & 0xFF;
+
+    if (regs.a == 0) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
 
     ClearNegative();
-    SetHalfCarry(diff & 0xFF);
-    SetZero(diff & 0xFF);
-    SetCarry(diff);
 
-    regs.a = static_cast<uint8_t>(diff);
+    if ((a & 0xF) + (u & 0xF) + c > 0xF) {
+      SetHalfCarry();
+    } else {
+      ClearHalfCarry();
+    }
+
+    if (a + u + c > 0xFF) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
   }
 
   void SharpSM83::SUB(SharpSM83::Register operand) {
@@ -478,10 +642,28 @@ namespace hijo {
   void SharpSM83::SUB(uint8_t data) {
     int32_t diff = regs.a - data;
 
+    if (diff == 0) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
+
     SetNegative();
-    SetHalfCarry(diff & 0xFF);
-    SetZero(diff & 0xFF);
-    SetCarry(diff);
+
+    int h = ((int) (regs.a) & 0xF) - ((int) data & 0xF) < 0;
+    int c = ((int) (regs.a)) - ((int) data) < 0;
+
+    if (h) {
+      SetHalfCarry();
+    } else {
+      ClearHalfCarry();
+    }
+
+    if (c) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
 
     regs.a = static_cast<uint8_t>(diff);
   }
@@ -498,14 +680,36 @@ namespace hijo {
   }
 
   void SharpSM83::SBC(uint8_t data) {
-    int32_t diff = regs.a - data - Carry();
+    uint8_t val = data + Carry();
+
+    int z = regs.a - val == 0;
+
+    int h = ((int) regs.a & 0xF)
+            - ((int) data & 0xF) - ((int) Carry()) < 0;
+    int c = ((int) regs.a)
+            - ((int) data) - ((int) Carry()) < 0;
+
+    regs.a = static_cast<uint8_t>(regs.a - val);
+
+    if (z) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
 
     SetNegative();
-    SetHalfCarry(diff & 0xFF);
-    SetZero(diff & 0xFF);
-    SetCarry(diff);
 
-    regs.a = static_cast<uint8_t>(diff);
+    if (h) {
+      SetHalfCarry();
+    } else {
+      ClearHalfCarry();
+    }
+
+    if (c) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
   }
 
   // Boolean Ops
@@ -582,25 +786,33 @@ namespace hijo {
   }
 
   void SharpSM83::CP(uint8_t data) {
-    int32_t diff = regs.a - data;
-    SetNegative();
+    int32_t n = regs.a - data;
 
-    if (!(diff & 0xFF)) {
+    if (n == 0) {
       SetZero();
     } else {
       ClearZero();
     }
 
-    if ((regs.a & 0xF) - (data & 0xF) < 0) {
+    SetNegative();
+
+    int32_t lowNibReg = regs.a & 0x0F;
+    int32_t lowNibData = data & 0x0F;
+
+    int32_t diff = lowNibReg - lowNibData;
+
+    if (diff < 0) {
       SetHalfCarry();
     } else {
       ClearHalfCarry();
     }
 
-    if (diff < 0)
+    if (n < 0) {
       SetCarry();
-    else
+    } else {
       ClearCarry();
+    }
+
   }
 
   // Stack
@@ -615,10 +827,20 @@ namespace hijo {
     // BC -> C, B
     // C = low, B = high
 
-    auto low = bus->cpuRead(regs.sp++);
-    auto high = bus->cpuRead(regs.sp++);
+    auto low = Stack::Pop();
+    auto high = Stack::Pop();
 
-    *targetPtr = (high << 8) | low;
+    uint16_t n = (high << 8) | low;
+
+    if (operand == Register::AF) {
+      *targetPtr = n & 0xFFF0;
+      // SetZero(regs.a);
+      //  SetHalfCarry(regs.a);
+      //  SetNegative(regs.a);
+      //  SetCarry(regs.a);
+    } else {
+      *targetPtr = n;
+    }
   }
 
   void SharpSM83::PUSH(SharpSM83::Register operand) {
@@ -629,19 +851,20 @@ namespace hijo {
       return;
     }
 
-    uint8_t high = (*targetPtr & 0xFF00) >> 8;
-    bus->cpuWrite(--regs.sp, high);
-
+    uint8_t high = ((*targetPtr & 0xFF00) >> 8) & 0xFF;
     uint8_t low = *targetPtr & 0xFF;
-    bus->cpuWrite(--regs.sp, low);
+
+    uint16_t n = (high << 8) | low;
+    Stack::Push16(n);
   }
 
   // Flow control
   void SharpSM83::JR(int8_t offset) {
-    int16_t res = (int16_t) regs.pc +
-                  (int8_t) (offset);
+    int8_t rel = (int8_t) (offset & 0xFF);
 
-    regs.pc = (uint16_t) res;
+    uint16_t addr = regs.pc + rel;
+
+    regs.pc = addr;
   }
 
   void SharpSM83::JP(uint16_t address) {
@@ -649,33 +872,24 @@ namespace hijo {
   }
 
   void SharpSM83::CALL(uint16_t address) {
-    uint8_t high = (regs.pc & 0xFF00) >> 8;
-    uint8_t low = regs.pc & 0xFF;
-
-    bus->cpuWrite(--regs.sp, high);
-    bus->cpuWrite(--regs.sp, low);
+    Stack::Push16(regs.pc);
 
     regs.pc = address;
   }
 
   void SharpSM83::RET() {
-    uint8_t low = bus->cpuRead(regs.sp++);
-    uint8_t high = bus->cpuRead(regs.sp++);
+    uint8_t low = Stack::Pop();
+    uint8_t high = Stack::Pop();
 
-    regs.pc = (high << 8) | low;
+    uint16_t n = (high << 8) | low;
+    regs.pc = n;
+  }
+
+  void SharpSM83::RST(uint16_t operand) {
+    CALL(operand);
   }
 
   /* Rotates, Swaps, Shifts */
-  void SharpSM83::RST(uint16_t operand) {
-    uint8_t high = (regs.pc & 0xFF00) >> 8;
-    uint8_t low = regs.pc & 0xFF;
-
-    bus->cpuWrite(--regs.sp, high);
-    bus->cpuWrite(--regs.sp, low);
-
-    regs.pc = operand;
-  }
-
   void SharpSM83::RLC(SharpSM83::Register operand) {
     auto opPtr = RegToPointer(operand);
 
@@ -693,18 +907,30 @@ namespace hijo {
   }
 
   uint8_t SharpSM83::RLC(uint8_t data) {
-    uint8_t res = (data << 1) | (data >> 7);
+    bool setC = false;
+    uint8_t result = (data << 1) & 0xFF;
+
+    if ((data & (1 << 7)) != 0) {
+      result |= 1;
+      setC = true;
+    }
+
+    if (result == 0) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
 
     ClearNegative();
     ClearHalfCarry();
-    SetZero(res & 0xFF);
-    if (res & 1) {
+
+    if (setC) {
       SetCarry();
     } else {
       ClearCarry();
     }
 
-    return res;
+    return result;
   }
 
   void SharpSM83::RRC(SharpSM83::Register operand) {
@@ -724,20 +950,26 @@ namespace hijo {
   }
 
   uint8_t SharpSM83::RRC(uint8_t data) {
-    uint8_t low = data & 1;
-    uint8_t res = (data >> 1) | (data << 7);
+    uint8_t old = data;
+    data >>= 1;
+    data |= (old << 7);
+
+    if (!data) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
 
     ClearNegative();
     ClearHalfCarry();
-    SetZero(res & 0xFF);
 
-    if (low) {
+    if (old & 1) {
       SetCarry();
     } else {
       ClearCarry();
     }
 
-    return res;
+    return data;
   }
 
   void SharpSM83::RL(SharpSM83::Register operand) {
@@ -757,20 +989,26 @@ namespace hijo {
   }
 
   uint8_t SharpSM83::RL(uint8_t data) {
-    uint32_t wide = (data << 1) | Carry();
-    uint8_t carry = static_cast<uint8_t>(wide >> 8);
+    uint8_t old = data;
+    data <<= 1;
+    data |= Carry();
+
+    if (!data) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
 
     ClearNegative();
     ClearHalfCarry();
-    SetZero(static_cast<uint8_t>(wide & 0xFF));
 
-    if (carry) {
+    if (!!(old & 0x80)) {
       SetCarry();
     } else {
       ClearCarry();
     }
 
-    return static_cast<uint8_t>(wide & 0xFF);
+    return data;
   }
 
   void SharpSM83::RR(SharpSM83::Register operand) {
@@ -790,20 +1028,27 @@ namespace hijo {
   }
 
   uint8_t SharpSM83::RR(uint8_t data) {
-    uint8_t low = data & 1;
-    uint8_t res = (data >> 1) | (Carry() << 7);
+    uint8_t old = data;
+    data >>= 1;
+
+    data |= (Carry() << 7);
+
+    if (!data) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
 
     ClearNegative();
     ClearHalfCarry();
-    SetZero(res & 0xFF);
 
-    if (low) {
+    if (old & 1) {
       SetCarry();
     } else {
       ClearCarry();
     }
 
-    return res;
+    return data;
   }
 
   void SharpSM83::SLA(SharpSM83::Register operand) {
@@ -823,17 +1068,25 @@ namespace hijo {
   }
 
   uint8_t SharpSM83::SLA(uint8_t data) {
+    uint8_t old = data;
+    data <<= 1;
+
+    if (!data) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
+
     ClearNegative();
     ClearHalfCarry();
-    SetZero(data << 1);
 
-    if (data >> 7) {
+    if (!!(old & 0x80)) {
       SetCarry();
     } else {
       ClearCarry();
     }
 
-    return data << 1;
+    return data;
   }
 
   void SharpSM83::SRA(SharpSM83::Register operand) {
@@ -853,9 +1106,16 @@ namespace hijo {
   }
 
   uint8_t SharpSM83::SRA(uint8_t data) {
+    uint8_t u = (int8_t) data >> 1;
+
+    if (!u) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
+
     ClearNegative();
     ClearHalfCarry();
-    SetZero(((int8_t) data) >> 1);
 
     if (data & 1) {
       SetCarry();
@@ -863,7 +1123,7 @@ namespace hijo {
       ClearCarry();
     }
 
-    return ((int8_t) data) >> 1;
+    return u;
   }
 
   void SharpSM83::SWAP(SharpSM83::Register operand) {
@@ -908,16 +1168,24 @@ namespace hijo {
   }
 
   uint8_t SharpSM83::SRL(uint8_t data) {
+    uint8_t u = data >> 1;
+
+    if (!u) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
+
     ClearNegative();
     ClearHalfCarry();
-    SetZero(data >> 1);
+
     if (data & 1) {
       SetCarry();
     } else {
       ClearCarry();
     }
 
-    return data >> 1;
+    return u;
   }
 
   /* Bit Ops */
@@ -933,16 +1201,14 @@ namespace hijo {
   }
 
   void SharpSM83::BIT(uint8_t bit, uint8_t data) {
-    auto mask = bitmasks[bit];
+    if (!(data & (1 << bit))) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
 
     ClearNegative();
     SetHalfCarry();
-
-    if ((data & mask) == 0)
-      SetZero();
-    else
-      ClearZero();
-
   }
 
   void SharpSM83::RES(uint8_t bit, SharpSM83::Register operand) {
@@ -965,9 +1231,7 @@ namespace hijo {
   }
 
   uint8_t SharpSM83::RES(uint8_t bit, uint8_t data) {
-    auto mask = bitmasks[bit];
-
-    return data & ~mask;
+    return data & ~(1 << bit);
   }
 
   void SharpSM83::SET(uint8_t bit, SharpSM83::Register operand) {
@@ -990,8 +1254,7 @@ namespace hijo {
   }
 
   uint8_t SharpSM83::SET(uint8_t bit, uint8_t data) {
-    auto mask = bitmasks[bit];
-    return data | mask;
+    return data | (1 << bit);
   }
 
   void SharpSM83::Disassemble(uint16_t start_addr, uint16_t end_addr) {
@@ -1092,6 +1355,105 @@ namespace hijo {
                               });
 
       start_addr += op.length;
+    }
+  }
+
+  void SharpSM83::DAA() {
+    int u = 0;
+    int fc = 0;
+
+    if (HalfCarry() || (!Negative() && (regs.a & 0xF) > 9)) {
+      u = 6;
+    }
+
+    if (Carry() || (!Negative() && regs.a > 0x99)) {
+      u |= 0x60;
+      fc = 1;
+    }
+
+    if (Negative()) {
+      regs.a -= u;
+    } else {
+      regs.a += u;
+    }
+
+    if ((regs.a & 0xFF) == 0) {
+      SetZero();
+    } else {
+      ClearZero();
+    }
+
+    ClearHalfCarry();
+
+    if (fc == 1) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
+  }
+
+  void SharpSM83::RLCA() {
+    uint8_t u = regs.a;
+    bool c = (u >> 7) & 1;
+    u = (u << 1) | c;
+    regs.a = u;
+
+    ClearZero();
+    ClearNegative();
+    ClearHalfCarry();
+    if (c) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
+  }
+
+  void SharpSM83::RRCA() {
+    uint8_t b = regs.a & 1;
+    regs.a >>= 1;
+    regs.a |= (b << 7);
+
+    ClearZero();
+    ClearNegative();
+    ClearHalfCarry();
+    if (b) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
+  }
+
+  void SharpSM83::RLA() {
+    uint8_t u = regs.a;
+    uint8_t cf = Carry();
+    uint8_t c = (u >> 7) & 1;
+
+    regs.a = (u << 1) | cf;
+
+    ClearZero();
+    ClearNegative();
+    ClearHalfCarry();
+    if (c) {
+      SetCarry();
+    } else {
+      ClearCarry();
+    }
+  }
+
+  void SharpSM83::RRA() {
+    uint8_t carry = Carry();
+    uint8_t new_c = regs.a & 1;
+
+    regs.a >>= 1;
+    regs.a |= (carry << 7);
+
+    ClearZero();
+    ClearNegative();
+    ClearHalfCarry();
+    if (new_c) {
+      SetCarry();
+    } else {
+      ClearCarry();
     }
   }
 

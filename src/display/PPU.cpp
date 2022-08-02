@@ -25,10 +25,10 @@ namespace hijo {
     windowLine = 0;
 
     lcd.Reset();
-    lcd.LCDSSetMode(LCD::Mode::OAM);
+    lcd.LCDS_SetMode(LCD::Mode::OAM);
 
     memset(m_VideoRam, 0, 1024 * 8);
-    memset(m_OAMRam, 0, 40);
+    memset(m_OAMRam, 0, 40 * sizeof(OAMEntry));
 
     for (auto n = 0; n < m_YRes * m_XRes; n++) {
       videoBuffer.push_back({0, 0, 0, 0xFF});
@@ -40,30 +40,36 @@ namespace hijo {
 
     lineTicks++;
 
-    switch (lcd.LCDSMode()) {
-      case LCD::Mode::HBlank:
-        HBlankMode();
-        break;
-      case LCD::Mode::VBlank:
-        VBlankMode();
-        break;
+    switch (lcd.LCDS_Mode()) {
       case LCD::Mode::OAM:
         OAMMode();
         break;
       case LCD::Mode::XFER:
         XFERMode();
         break;
+      case LCD::Mode::HBlank:
+        HBlankMode();
+        break;
+      case LCD::Mode::VBlank:
+        VBlankMode();
+        break;
     }
-
-
   }
 
   void PPU::OAMWrite(uint16_t addr, uint8_t data) {
+    if (addr >= 0xFE00) {
+      addr -= 0xFE00;
+    }
+
     uint8_t *p = (uint8_t *) m_OAMRam;
     p[addr] = data;
   }
 
   uint8_t PPU::OAMRead(uint16_t addr) {
+    if (addr >= 0xFE00) {
+      addr -= 0xFE00;
+    }
+
     uint8_t *p = (uint8_t *) m_OAMRam;
     return p[addr];
   }
@@ -80,7 +86,7 @@ namespace hijo {
     auto &lcd = LCD::Get();
     auto &lcdRegs = lcd.Regs();
 
-    return lcd.LCDCWinEnable() &&
+    return lcd.LCDC_WinEnable() &&
            lcdRegs.WINX >= 0 && lcdRegs.WINX <= 166 &&
            lcdRegs.WINY >= 0 && lcdRegs.WINY < m_YRes;
   }
@@ -176,11 +182,11 @@ namespace hijo {
 
       auto color = lcdRegs.bgColors[high | low];
 
-      if (!lcd.LCDCEnableBGW()) {
+      if (!lcd.LCDC_BGWEnabled()) {
         color = lcdRegs.bgColors[0];
       }
 
-      if (lcd.LCDCEnableOBJ()) {
+      if (lcd.LCDC_OBJEnabled()) {
         color = FetchSpritePixels(bit, color, high | low);
       }
 
@@ -220,7 +226,7 @@ namespace hijo {
     auto &bus = Gameboy::Get();
 
     int32_t curY = lcdRegs.LY;
-    uint8_t sprHeight = lcd.LCDCObjHeight();
+    uint8_t sprHeight = lcd.LCDC_ObjHeight();
 
     for (auto i = 0; i < fetchedEntryCount; i++) {
       uint8_t ty = ((curY + 16) - fetchedEntries[i].y) * 2;
@@ -254,9 +260,9 @@ namespace hijo {
         uint8_t w_tile_y = windowLine / 8;
 
         fifo.bgwFetchData[0] = bus.cpuRead(
-            (lcd.LCDCWinMapArea() + (fifo.fetchX + 7 - lcdRegs.WINX) / 8) + (w_tile_y * 32));
+            (lcd.LCDC_WinMapArea() + (fifo.fetchX + 7 - lcdRegs.WINX) / 8) + (w_tile_y * 32));
 
-        if (lcd.LCDBGWDataArea() == 0x8800)
+        if (lcd.LCDC_BGWDataArea() == 0x8800)
           fifo.bgwFetchData[0] += 128;
       }
     }
@@ -270,17 +276,17 @@ namespace hijo {
       case FetchState::Tile: {
         fetchedEntryCount = 0;
 
-        if (lcd.LCDCEnableBGW()) {
-          fifo.bgwFetchData[0] = bus.cpuRead(lcd.LCDCBGMapArea() + (fifo.mapX / 8) + ((fifo.mapY / 8) * 32));
+        if (lcd.LCDC_BGWEnabled()) {
+          fifo.bgwFetchData[0] = bus.cpuRead(lcd.LCDC_BGMapArea() + (fifo.mapX / 8) + ((fifo.mapY / 8) * 32));
 
-          if (lcd.LCDBGWDataArea() == 0x8800) {
+          if (lcd.LCDC_BGWDataArea() == 0x8800) {
             fifo.bgwFetchData[0] += 128;
           }
 
           PipelineLoadWindowTile();
         }
 
-        if (lcd.LCDCEnableOBJ() && lineSprites) {
+        if (lcd.LCDC_OBJEnabled() && lineSprites) {
           PipelineLoadSpriteTile();
         }
 
@@ -289,7 +295,7 @@ namespace hijo {
       }
         break;
       case FetchState::Data0: {
-        fifo.bgwFetchData[1] = bus.cpuRead(lcd.LCDBGWDataArea() + (fifo.bgwFetchData[0] * 16) + fifo.tileY);
+        fifo.bgwFetchData[1] = bus.cpuRead(lcd.LCDC_BGWDataArea() + (fifo.bgwFetchData[0] * 16) + fifo.tileY);
 
         PipelineLoadSpriteData(0);
 
@@ -297,7 +303,7 @@ namespace hijo {
       }
         break;
       case FetchState::Data1: {
-        fifo.bgwFetchData[2] = bus.cpuRead(lcd.LCDBGWDataArea() + (fifo.bgwFetchData[0] * 16) + fifo.tileY + 1);
+        fifo.bgwFetchData[2] = bus.cpuRead(lcd.LCDC_BGWDataArea() + (fifo.bgwFetchData[0] * 16) + fifo.tileY + 1);
 
         PipelineLoadSpriteData(1);
 
@@ -356,7 +362,7 @@ namespace hijo {
     auto &lcd = LCD::Get();
 
     if (lineTicks >= 80) {
-      lcd.LCDSSetMode(LCD::Mode::XFER);
+      lcd.LCDS_SetMode(LCD::Mode::XFER);
 
       fifo.state = FetchState::Tile;
       fifo.lineX = 0;
@@ -382,9 +388,9 @@ namespace hijo {
     if (fifo.pushedX >= m_XRes) {
       PipelineFifoReset();
 
-      lcd.LCDSSetMode(LCD::Mode::HBlank);
+      lcd.LCDS_SetMode(LCD::Mode::HBlank);
 
-      if (lcd.LCDSStatInt(LCD::StatSrc::HBlank)) {
+      if (lcd.LCDS_StatInt(LCD::StatSrc::HBlank)) {
         Interrupts::RequestInterrupt(bus.m_Cpu, Interrupts::Interrupt::LCDStat);
       }
     }
@@ -399,10 +405,10 @@ namespace hijo {
       IncrementLY();
 
       if (lcdRegs.LY >= m_YRes) {
-        lcd.LCDSSetMode(LCD::Mode::VBlank);
+        lcd.LCDS_SetMode(LCD::Mode::VBlank);
         Interrupts::RequestInterrupt(bus.m_Cpu, Interrupts::Interrupt::VBlank);
 
-        if (lcd.LCDSStatInt(LCD::StatSrc::VBlank)) {
+        if (lcd.LCDS_StatInt(LCD::StatSrc::VBlank)) {
           Interrupts::RequestInterrupt(bus.m_Cpu, Interrupts::Interrupt::LCDStat);
         }
 
@@ -410,7 +416,7 @@ namespace hijo {
 
         // Cart save here
       } else {
-        lcd.LCDSSetMode(LCD::Mode::OAM);
+        lcd.LCDS_SetMode(LCD::Mode::OAM);
       }
 
       lineTicks = 0;
@@ -424,7 +430,7 @@ namespace hijo {
       IncrementLY();
 
       if (lcdRegs.LY >= m_LinesPerFrame) {
-        lcd.LCDSSetMode(LCD::Mode::OAM);
+        lcd.LCDS_SetMode(LCD::Mode::OAM);
         lcdRegs.LY = 0;
         windowLine = 0;
       }
@@ -446,14 +452,14 @@ namespace hijo {
     lcdRegs.LY++;
 
     if (lcdRegs.LY == lcdRegs.LYCP) {
-      lcd.LCDSLYCSet(true);
+      lcd.LCDS_LYCSet(true);
 
-      if (lcd.LCDSStatInt(LCD::StatSrc::LYC)) {
+      if (lcd.LCDS_StatInt(LCD::StatSrc::LYC)) {
         Interrupts::RequestInterrupt(bus.m_Cpu, Interrupts::Interrupt::LCDStat);
       }
 
     } else {
-      lcd.LCDSLYCSet(false);
+      lcd.LCDS_LYCSet(false);
     }
   }
 
@@ -462,7 +468,7 @@ namespace hijo {
     auto &lcdRegs = lcd.Regs();
 
     int32_t curY = lcdRegs.LY;
-    uint8_t sprHeight = lcd.LCDCObjHeight();
+    uint8_t sprHeight = lcd.LCDC_ObjHeight();
     memset(lineEntries, 0, sizeof(lineEntries));
 
     for (auto i = 0; i < 40; i++) {
@@ -474,7 +480,7 @@ namespace hijo {
       if (lineSpriteCount >= 10)
         break;
 
-      if (e.y < curY + 16 && e.y + sprHeight > curY + 16) {
+      if (e.y <= curY + 16 && e.y + sprHeight > curY + 16) {
         OAMLineEntry *entry = &lineEntries[lineSpriteCount++];
 
         entry->entry = e;

@@ -31,6 +31,8 @@ namespace hijo {
 
     RenderTexture &GetRenderTexture() { return m_RenderTexture; }
 
+    RenderTexture &GetTileTexture() { return m_TileTexture; }
+
     int32_t ScreenWidth() {
       return m_ScreenWidth;
     }
@@ -38,7 +40,7 @@ namespace hijo {
     int32_t ScreenHeight() {
       return m_ScreenHeight;
     }
-    
+
     void System(System *system) {
       m_System = system;
     }
@@ -96,6 +98,7 @@ namespace hijo {
 
     Camera2D m_Camera{};
     RenderTexture m_RenderTexture;
+    RenderTexture m_TileTexture;
 
     class System *m_System = nullptr;
   };

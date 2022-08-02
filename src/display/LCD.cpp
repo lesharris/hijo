@@ -1,76 +1,64 @@
 #include "LCD.h"
 
+#include "common/common.h"
+#include "system/Gameboy.h"
+
 namespace hijo {
   LCD::LCD() {
     Reset();
   }
 
-  bool LCD::LCDCEnableBGW() {
-    return GetLCDCBit(0);
+  bool LCD::LCDC_BGWEnabled() {
+    return BIT(regs.LCDC, 0);
   }
 
-  bool LCD::LCDCEnableOBJ() {
-    return GetLCDCBit(1);
+  bool LCD::LCDC_OBJEnabled() {
+    return BIT(regs.LCDC, 1);
   }
 
-  uint8_t LCD::LCDCObjHeight() {
-    return GetLCDCBit(2) ? 16 : 8;
+  uint8_t LCD::LCDC_ObjHeight() {
+    return BIT(regs.LCDC, 2) ? 16 : 8;
   }
 
-  uint16_t LCD::LCDCBGMapArea() {
-    return GetLCDCBit(3) ? 0x9C00 : 0x9800;
+  uint16_t LCD::LCDC_BGMapArea() {
+    return BIT(regs.LCDC, 3) ? 0x9C00 : 0x9800;
   }
 
-  uint16_t LCD::LCDBGWDataArea() {
-    return GetLCDCBit(4) ? 0x8000 : 0x8800;
+  uint16_t LCD::LCDC_BGWDataArea() {
+    return BIT(regs.LCDC, 4) ? 0x8000 : 0x8800;
   }
 
-  bool LCD::LCDCWinEnable() {
-    return GetLCDCBit(5);
+  bool LCD::LCDC_WinEnable() {
+    return BIT(regs.LCDC, 5);
   }
 
-  uint16_t LCD::LCDCWinMapArea() {
-    return GetLCDCBit(6) ? 0x9C00 : 0x9800;
+  uint16_t LCD::LCDC_WinMapArea() {
+    return BIT(regs.LCDC, 6) ? 0x9C00 : 0x9800;
   }
 
-  bool LCD::LCDCEnable() {
-    return GetLCDCBit(7);
+  bool LCD::LCDC_Enabled() {
+    return BIT(regs.LCDC, 7);
   }
 
-  LCD::Mode LCD::LCDSMode() {
+  LCD::Mode LCD::LCDS_Mode() {
     return static_cast<Mode>(regs.LCDS & 0x3);
   }
 
-  void LCD::LCDSSetMode(const LCD::Mode &mode) {
+  void LCD::LCDS_SetMode(const LCD::Mode &mode) {
     regs.LCDS &= ~0x3;
     regs.LCDS |= static_cast<uint8_t>(mode);
   }
 
-  bool LCD::LCDSLYC() {
-    return GetLCDSBit(2);
+  bool LCD::LCDS_LYC() {
+    return BIT(regs.LCDS, 2);
   }
 
-  void LCD::LCDSLYCSet(bool isSet) {
-    SetLCDSBit(2, isSet);
+  void LCD::LCDS_LYCSet(bool isSet) {
+    BIT_SET(regs.LCDS, 2, isSet);
   }
 
-  uint8_t LCD::LCDSStatInt(StatSrc src) {
+  uint8_t LCD::LCDS_StatInt(StatSrc src) {
     return regs.LCDS & static_cast<uint8_t>(src);
-  }
-
-  bool LCD::GetLCDCBit(uint8_t bit) {
-    return ((regs.LCDC & bitmasks[bit]) >> bit) == 1;
-  }
-
-  bool LCD::GetLCDSBit(uint8_t bit) {
-    return ((regs.LCDS & bitmasks[bit]) >> bit) == 1;
-  }
-
-  void LCD::SetLCDSBit(uint8_t bit, bool isSet) {
-    if (isSet)
-      regs.LCDS |= bitmasks[bit];
-    else
-      regs.LCDS &= ~bitmasks[bit];
   }
 
   uint8_t LCD::Read(uint16_t addr) {
@@ -143,8 +131,9 @@ namespace hijo {
         break;
 
       case 0xFF46: {
-        regs.DMA = data;
-        // do DMA
+        auto &bus = Gameboy::Get();
+        auto &dma = bus.m_DMA;
+        dma.Start(data);
       }
         break;
 
