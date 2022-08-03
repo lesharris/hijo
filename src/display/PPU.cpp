@@ -3,6 +3,7 @@
 #include "LCD.h"
 #include "system/Gameboy.h"
 #include "cpu/Interrupts.h"
+#include <spdlog/spdlog.h>
 
 namespace hijo {
   PPU::PPU() {
@@ -109,7 +110,8 @@ namespace hijo {
 
   Color PPU::PixelFifoPop() {
     if (fifo.pixelFifo.size == 0) {
-      exit(-1);
+      spdlog::get("console")->warn("Empty Pixel Fifo Popped");
+      return BLACK;
     }
 
     FifoEntry *popped = fifo.pixelFifo.head;

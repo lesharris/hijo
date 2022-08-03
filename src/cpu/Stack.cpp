@@ -20,7 +20,7 @@ namespace hijo {
     auto &bus = Gameboy::Get();
     auto &regs = bus.m_Cpu.regs;
 
-    return bus.cpuRead(regs.sp--);
+    return bus.cpuRead(regs.sp++);
   }
 
   uint16_t Stack::Pop16() {

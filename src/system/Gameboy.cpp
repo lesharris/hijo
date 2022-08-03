@@ -33,6 +33,8 @@ namespace hijo {
      // m_Ram[4] = 0xFD;
      //m_Ram[3] = 0xC3; // JP $0000;*/
 
+    m_Timer.div = 0xABCC;
+
     EventManager::Get().Attach<
         Events::ExecuteCPU,
         &Gameboy::HandleCPUExecution
@@ -179,15 +181,18 @@ namespace hijo {
     // 154 Scanlines per Frame
     // 456 tcycles per scanline
     // 70224 tcycles per frame
+    // 17556 mcycles per frame
 
     if (m_Run) {
-      if (m_TargetActive && m_Cpu.regs.pc == m_TargetAddr) {
-        m_TargetActive = false;
-        m_Run = false;
-        return;
-      }
+      for (auto c = 0; c < 17556; c++) {
+        if (m_TargetActive && m_Cpu.regs.pc == m_TargetAddr) {
+          m_TargetActive = false;
+          m_Run = false;
+          return;
+        }
 
-      m_Cpu.Step();
+        m_Cpu.Step();
+      }
     }
   }
 
@@ -196,12 +201,7 @@ namespace hijo {
   }
 
   void Gameboy::HandleCPUStep(const Events::StepCPU &) {
-    //auto cycles = m_Cpu.Step();
-
-    // for (auto n = 0; n < 4; n++)
-    //  m_PPU.Tick();
-
-    //m_CycleCount += cycles;
+    m_Cpu.Step();
   }
 
   void Gameboy::InsertCartridge(const std::string &path) {
@@ -215,7 +215,7 @@ namespace hijo {
   }
 
   void Gameboy::Cycles(uint32_t cycles) {
-    for (auto i = 0; i < cycles; i++) {
+    for (uint32_t i = 0; i < cycles; i++) {
       for (auto n = 0; n < 4; n++) {
         m_CycleCount++;
         m_Timer.Tick();

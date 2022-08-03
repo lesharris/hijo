@@ -1,6 +1,7 @@
 #include "Timer.h"
 #include "system/Gameboy.h"
 #include "Interrupts.h"
+#include <spdlog/spdlog.h>
 
 namespace hijo {
   Timer::Timer() {
@@ -81,8 +82,10 @@ namespace hijo {
       case 0xFF07:
         return tac;
 
-      default:
-        exit(-3);
+      default: {
+        spdlog::get("console")->warn("Invalid Timer Address passed: {:04X}", address);
+        return 0;
+      }
     }
   }
 } // hijo

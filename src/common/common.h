@@ -25,7 +25,7 @@ namespace hijo {
     return std::make_shared<T>(std::forward<Args>(args)...);
   }
 
-  bool BIT(uint8_t data, uint8_t number);
+  uint8_t BIT(uint8_t data, uint8_t number);
 
   void BIT_SET(uint8_t &data, uint8_t number, bool isSet);
 }

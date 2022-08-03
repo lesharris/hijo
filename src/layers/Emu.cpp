@@ -6,24 +6,25 @@
 
 namespace hijo {
   void Emu::OnAttach() {
+    // m_GB.InsertCartridge("boilerplate.gb");
     //m_GB.InsertCartridge("boot_regs-dmgABC.gb");
     //m_GB.InsertCartridge("daa_test.gbc");
     //m_GB.InsertCartridge("reg_f.gb");
-    // m_GB.InsertCartridge("daa.gb");
+    //m_GB.InsertCartridge("daa.gb");
 
-    //  m_GB.InsertCartridge("instr_timing.gb");
-    //m_GB.InsertCartridge("02-interrupts.gb");
-    // m_GB.InsertCartridge("07-jr,jp,call,ret,rst.gb");
+    //m_GB.InsertCartridge("instr_timing.gb");
+    //m_GB.InsertCartridge("07-jr,jp,call,ret,rst.gb");
 
-    //m_GB.InsertCartridge("01-special.gb"); // Passed
-    //m_GB.InsertCartridge("03-op sp,hl.gb"); // Passed
-    //m_GB.InsertCartridge("04-op r,imm.gb"); // Passed
-    //m_GB.InsertCartridge("05-op rp.gb"); // Passed
-    m_GB.InsertCartridge("06-ld r,r.gb"); // Passed
-    //m_GB.InsertCartridge("08-misc instrs.gb"); // Passed
-    //m_GB.InsertCartridge("09-op r,r.gb"); // Passed
-    //m_GB.InsertCartridge("10-bit ops.gb"); // Passed
-    //m_GB.InsertCartridge("11-op a,(hl).gb"); // Passed
+    //m_GB.InsertCartridge("01-special.gb");
+    //m_GB.InsertCartridge("02-interrupts.gb"); // PASSE
+    m_GB.InsertCartridge("03-op sp,hl.gb");
+    // m_GB.InsertCartridge("04-op r,imm.gb");
+    //m_GB.InsertCartridge("05-op rp.gb");
+    //m_GB.InsertCartridge("06-ld r,r.gb");
+    //m_GB.InsertCartridge("08-misc instrs.gb");
+    //m_GB.InsertCartridge("09-op r,r.gb");
+    //m_GB.InsertCartridge("10-bit ops.gb");
+    //m_GB.InsertCartridge("11-op a,(hl).gb");
 
     //m_GB.InsertCartridge("cpu_instrs.gb");
 
@@ -69,7 +70,7 @@ namespace hijo {
   }
 
   std::string Emu::Name() const noexcept {
-    return std::string("level");
+    return std::string("emu");
   }
 
   void Emu::HandleKeyPress(Events::KeyPressed &event) {

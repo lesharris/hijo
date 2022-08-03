@@ -1,6 +1,8 @@
 #include "SharpSM83.h"
 #include "Interrupts.h"
 #include "system/Gameboy.h"
+#include <spdlog/spdlog.h>
+#include <regex>
 
 namespace hijo {
   SharpSM83::SharpSM83() {
@@ -8,330 +10,328 @@ namespace hijo {
   }
 
   void SharpSM83::Reset() {
-    auto &bus = Gameboy::Get();
-
     regs.pc = 0x100;
     regs.sp = 0xFFFE;
     *((short *) &regs.a) = 0xB001;
     *((short *) &regs.b) = 0x1300;
     *((short *) &regs.d) = 0xD800;
     *((short *) &regs.h) = 0x4D01;
-    ie_register = 0;
-    int_flags = 0;
-    int_master_enabled = false;
-    enabling_ime = false;
-
-    bus.m_Timer.div = 0xABCC;
+    m_IE = 0;
+    m_IF = 0;
+    m_InterruptMasterEnabled = false;
+    m_EnablingIME = false;
   }
 
-  uint16_t SharpSM83::Register(const Instructions::RegisterType &t) {
+  uint16_t SharpSM83::Reg(const Register &t) {
     switch (t) {
-      case Instructions::RegisterType::RT_A:
+      case Register::A:
         return regs.a;
-      case Instructions::RegisterType::RT_F:
+      case Register::F:
         return regs.f;
-      case Instructions::RegisterType::RT_B:
+      case Register::B:
         return regs.b;
-      case Instructions::RegisterType::RT_C:
+      case Register::C:
         return regs.c;
-      case Instructions::RegisterType::RT_D:
+      case Register::D:
         return regs.d;
-      case Instructions::RegisterType::RT_E:
+      case Register::E:
         return regs.e;
-      case Instructions::RegisterType::RT_H:
+      case Register::H:
         return regs.h;
-      case Instructions::RegisterType::RT_L:
+      case Register::L:
         return regs.l;
 
-      case Instructions::RegisterType::RT_AF:
+      case Register::AF:
         return reverse(*((uint16_t *) &regs.a));
-      case Instructions::RegisterType::RT_BC:
+      case Register::BC:
         return reverse(*((uint16_t *) &regs.b));
-      case Instructions::RegisterType::RT_DE:
+      case Register::DE:
         return reverse(*((uint16_t *) &regs.d));
-      case Instructions::RegisterType::RT_HL:
+      case Register::HL:
         return reverse(*((uint16_t *) &regs.h));
 
-      case Instructions::RegisterType::RT_PC:
+      case Register::PC:
         return regs.pc;
-      case Instructions::RegisterType::RT_SP:
+      case Register::SP:
         return regs.sp;
       default:
         return 0;
     }
   }
 
-  void SharpSM83::Register(const Instructions::RegisterType &t, uint16_t val) {
+  void SharpSM83::Reg(const Register &t, uint16_t value) {
     switch (t) {
-      case Instructions::RegisterType::RT_A:
-        regs.a = val & 0xFF;
+      case Register::A:
+        regs.a = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_F:
-        regs.f = val & 0xFF;
+      case Register::F:
+        regs.f = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_B:
-        regs.b = val & 0xFF;
+      case Register::B:
+        regs.b = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_C: {
-        regs.c = val & 0xFF;
-      }
+      case Register::C:
+        regs.c = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_D:
-        regs.d = val & 0xFF;
+      case Register::D:
+        regs.d = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_E:
-        regs.e = val & 0xFF;
+      case Register::E:
+        regs.e = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_H:
-        regs.h = val & 0xFF;
+      case Register::H:
+        regs.h = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_L:
-        regs.l = val & 0xFF;
+      case Register::L:
+        regs.l = value & 0xFF;
         break;
 
-      case Instructions::RegisterType::RT_AF:
-        *((uint16_t *) &regs.a) = reverse(val);
+      case Register::AF:
+        *((uint16_t *) &regs.a) = reverse(value);
         break;
-      case Instructions::RegisterType::RT_BC:
-        *((uint16_t *) &regs.b) = reverse(val);
+      case Register::BC:
+        *((uint16_t *) &regs.b) = reverse(value);
         break;
-      case Instructions::RegisterType::RT_DE:
-        *((uint16_t *) &regs.d) = reverse(val);
+      case Register::DE:
+        *((uint16_t *) &regs.d) = reverse(value);
         break;
-      case Instructions::RegisterType::RT_HL: {
-        *((uint16_t *) &regs.h) = reverse(val);
+      case Register::HL: {
+        *((uint16_t *) &regs.h) = reverse(value);
         break;
       }
 
-      case Instructions::RegisterType::RT_PC:
-        regs.pc = val;
+      case Register::PC:
+        regs.pc = value;
         break;
-      case Instructions::RegisterType::RT_SP:
-        regs.sp = val;
+      case Register::SP:
+        regs.sp = value;
         break;
-      case Instructions::RegisterType::RT_NONE:
+      case Register::NONE:
         break;
     }
   }
 
-  uint8_t SharpSM83::Register8(const Instructions::RegisterType &t) {
+  uint8_t SharpSM83::Reg8(const Register &t) {
     auto &bus = Gameboy::Get();
     switch (t) {
-      case Instructions::RegisterType::RT_A:
+      case Register::A:
         return regs.a;
-      case Instructions::RegisterType::RT_F:
+      case Register::F:
         return regs.f;
-      case Instructions::RegisterType::RT_B:
+      case Register::B:
         return regs.b;
-      case Instructions::RegisterType::RT_C:
+      case Register::C:
         return regs.c;
-      case Instructions::RegisterType::RT_D:
+      case Register::D:
         return regs.d;
-      case Instructions::RegisterType::RT_E:
+      case Register::E:
         return regs.e;
-      case Instructions::RegisterType::RT_H:
+      case Register::H:
         return regs.h;
-      case Instructions::RegisterType::RT_L:
+      case Register::L:
         return regs.l;
-      case Instructions::RegisterType::RT_HL: {
-        return bus.cpuRead(Register(Instructions::RegisterType::RT_HL));
+      case Register::HL: {
+        return bus.cpuRead(Reg(Register::HL));
       }
       default:
+        spdlog::get("console")->warn("Invalid Reg8 Read");
+        return 0;
         break;
     }
   }
 
-  void SharpSM83::Register8(const Instructions::RegisterType &t, uint8_t val) {
+  void SharpSM83::Reg8(const Register &t, uint8_t value) {
     auto &bus = Gameboy::Get();
 
     switch (t) {
-      case Instructions::RegisterType::RT_A:
-        regs.a = val & 0xFF;
+      case Register::A:
+        regs.a = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_F:
-        regs.f = val & 0xFF;
+      case Register::F:
+        regs.f = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_B:
-        regs.b = val & 0xFF;
+      case Register::B:
+        regs.b = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_C:
-        regs.c = val & 0xFF;
+      case Register::C:
+        regs.c = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_D:
-        regs.d = val & 0xFF;
+      case Register::D:
+        regs.d = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_E:
-        regs.e = val & 0xFF;
+      case Register::E:
+        regs.e = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_H:
-        regs.h = val & 0xFF;
+      case Register::H:
+        regs.h = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_L:
-        regs.l = val & 0xFF;
+      case Register::L:
+        regs.l = value & 0xFF;
         break;
-      case Instructions::RegisterType::RT_HL:
-        bus.cpuWrite(Register(Instructions::RegisterType::RT_HL), val);
+      case Register::HL:
+        bus.cpuWrite(Reg(Register::HL), value);
         break;
       default:
         break;
     }
   }
 
-  SharpSM83::InstructionProc SharpSM83::GetProcessor(Instructions::InstructionType type) {
+  SharpSM83::InstructionProc SharpSM83::GetProcessor(Instruction type) {
     return m_Processors[type];
   }
 
   void SharpSM83::FetchData() {
     auto &bus = Gameboy::Get();
 
-    mem_dest = 0;
-    dest_is_mem = false;
+    m_MemoryDestination = 0;
+    DestinationIsMemory = false;
 
-    if (cur_inst == NULL) {
+    if (m_CurrentInstruction == NULL) {
+      spdlog::get("console")->warn("FetchData:  Current Instruction is Null!");
       return;
     }
 
-    switch (cur_inst->mode) {
-      case Instructions::AddressMode::AM_IMP:
+    switch (m_CurrentInstruction->mode) {
+      case AddressMode::IMP:
         return;
 
-      case Instructions::AddressMode::AM_R:
-        fetched_data = Register(cur_inst->reg1);
+      case AddressMode::R:
+        m_FetchedData = Reg(m_CurrentInstruction->reg1);
         return;
 
-      case Instructions::AddressMode::AM_R_R:
-        fetched_data = Register(cur_inst->reg2);
+      case AddressMode::R_R:
+        m_FetchedData = Reg(m_CurrentInstruction->reg2);
         return;
 
-      case Instructions::AddressMode::AM_R_D8:
-        fetched_data = bus.cpuRead(regs.pc);
+      case AddressMode::R_D8:
+        m_FetchedData = bus.cpuRead(regs.pc);
         bus.Cycles(1);
         regs.pc++;
         return;
 
-      case Instructions::AddressMode::AM_R_D16:
-      case Instructions::AddressMode::AM_D16: {
+      case AddressMode::R_D16:
+      case AddressMode::D16: {
         uint16_t lo = bus.cpuRead(regs.pc);
         bus.Cycles(1);
 
         uint16_t hi = bus.cpuRead(regs.pc + 1);
         bus.Cycles(1);
 
-        fetched_data = lo | (hi << 8);
+        m_FetchedData = lo | (hi << 8);
 
         regs.pc += 2;
 
         return;
       }
 
-      case Instructions::AddressMode::AM_MR_R:
-        fetched_data = Register(cur_inst->reg2);
-        mem_dest = Register(cur_inst->reg1);
-        dest_is_mem = true;
+      case AddressMode::MR_R:
+        m_FetchedData = Reg(m_CurrentInstruction->reg2);
+        m_MemoryDestination = Reg(m_CurrentInstruction->reg1);
+        DestinationIsMemory = true;
 
-        if (cur_inst->reg1 == Instructions::RegisterType::RT_C) {
-          mem_dest |= 0xFF00;
+        if (m_CurrentInstruction->reg1 == Register::C) {
+          m_MemoryDestination |= 0xFF00;
         }
 
         return;
 
-      case Instructions::AddressMode::AM_R_MR: {
-        uint16_t addr = Register(cur_inst->reg2);
+      case AddressMode::R_MR: {
+        uint16_t addr = Reg(m_CurrentInstruction->reg2);
 
-        if (cur_inst->reg2 == Instructions::RegisterType::RT_C) {
+        if (m_CurrentInstruction->reg2 == Register::C) {
           addr |= 0xFF00;
         }
 
-        fetched_data = bus.cpuRead(addr);
+        m_FetchedData = bus.cpuRead(addr);
         bus.Cycles(1);
 
       }
         return;
 
-      case Instructions::AddressMode::AM_R_HLI:
-        fetched_data = bus.cpuRead(Register(cur_inst->reg2));
+      case AddressMode::R_HLI:
+        m_FetchedData = bus.cpuRead(Reg(m_CurrentInstruction->reg2));
         bus.Cycles(1);
-        Register(Instructions::RegisterType::RT_HL, Register(Instructions::RegisterType::RT_HL) + 1);
+        Reg(Register::HL, Reg(Register::HL) + 1);
         return;
 
-      case Instructions::AddressMode::AM_R_HLD:
-        fetched_data = bus.cpuRead(Register(cur_inst->reg2));
+      case AddressMode::R_HLD:
+        m_FetchedData = bus.cpuRead(Reg(m_CurrentInstruction->reg2));
         bus.Cycles(1);
-        Register(Instructions::RegisterType::RT_HL, Register(Instructions::RegisterType::RT_HL) - 1);
+        Reg(Register::HL, Reg(Register::HL) - 1);
         return;
 
-      case Instructions::AddressMode::AM_HLI_R:
-        fetched_data = Register(cur_inst->reg2);
-        mem_dest = Register(cur_inst->reg1);
-        dest_is_mem = true;
-        Register(Instructions::RegisterType::RT_HL, Register(Instructions::RegisterType::RT_HL) + 1);
+      case AddressMode::HLI_R:
+        m_FetchedData = Reg(m_CurrentInstruction->reg2);
+        m_MemoryDestination = Reg(m_CurrentInstruction->reg1);
+        DestinationIsMemory = true;
+        Reg(Register::HL, Reg(Register::HL) + 1);
         return;
 
-      case Instructions::AddressMode::AM_HLD_R:
-        fetched_data = Register(cur_inst->reg2);
-        mem_dest = Register(cur_inst->reg1);
-        dest_is_mem = true;
-        Register(Instructions::RegisterType::RT_HL, Register(Instructions::RegisterType::RT_HL) - 1);
+      case AddressMode::HLD_R:
+        m_FetchedData = Reg(m_CurrentInstruction->reg2);
+        m_MemoryDestination = Reg(m_CurrentInstruction->reg1);
+        DestinationIsMemory = true;
+        Reg(Register::HL, Reg(Register::HL) - 1);
         return;
 
-      case Instructions::AddressMode::AM_R_A8:
-        fetched_data = bus.cpuRead(regs.pc);
-        bus.Cycles(1);
-        regs.pc++;
-        return;
-
-      case Instructions::AddressMode::AM_A8_R:
-        mem_dest = bus.cpuRead(regs.pc) | 0xFF00;
-        dest_is_mem = true;
+      case AddressMode::R_A8:
+        m_FetchedData = bus.cpuRead(regs.pc);
         bus.Cycles(1);
         regs.pc++;
         return;
 
-      case Instructions::AddressMode::AM_HL_SPR:
-        fetched_data = bus.cpuRead(regs.pc);
+      case AddressMode::A8_R:
+        m_MemoryDestination = bus.cpuRead(regs.pc) | 0xFF00;
+        DestinationIsMemory = true;
         bus.Cycles(1);
         regs.pc++;
         return;
 
-      case Instructions::AddressMode::AM_D8:
-        fetched_data = bus.cpuRead(regs.pc);
+      case AddressMode::HL_SPR:
+        m_FetchedData = bus.cpuRead(regs.pc);
         bus.Cycles(1);
         regs.pc++;
         return;
 
-      case Instructions::AddressMode::AM_A16_R:
-      case Instructions::AddressMode::AM_D16_R: {
+      case AddressMode::D8:
+        m_FetchedData = bus.cpuRead(regs.pc);
+        bus.Cycles(1);
+        regs.pc++;
+        return;
+
+      case AddressMode::A16_R:
+      case AddressMode::D16_R: {
         uint16_t lo = bus.cpuRead(regs.pc);
         bus.Cycles(1);
 
         uint16_t hi = bus.cpuRead(regs.pc + 1);
         bus.Cycles(1);
 
-        mem_dest = lo | (hi << 8);
-        dest_is_mem = true;
+        m_MemoryDestination = lo | (hi << 8);
+        DestinationIsMemory = true;
 
         regs.pc += 2;
-        fetched_data = Register(cur_inst->reg2);
+        m_FetchedData = Reg(m_CurrentInstruction->reg2);
 
       }
         return;
 
-      case Instructions::AddressMode::AM_MR_D8:
-        fetched_data = bus.cpuRead(regs.pc);
+      case AddressMode::MR_D8:
+        m_FetchedData = bus.cpuRead(regs.pc);
         bus.Cycles(1);
         regs.pc++;
-        mem_dest = Register(cur_inst->reg1);
-        dest_is_mem = true;
+        m_MemoryDestination = Reg(m_CurrentInstruction->reg1);
+        DestinationIsMemory = true;
         return;
 
-      case Instructions::AddressMode::AM_MR:
-        mem_dest = Register(cur_inst->reg1);
-        dest_is_mem = true;
-        fetched_data = bus.cpuRead(Register(cur_inst->reg1));
+      case AddressMode::MR:
+        m_MemoryDestination = Reg(m_CurrentInstruction->reg1);
+        DestinationIsMemory = true;
+        m_FetchedData = bus.cpuRead(Reg(m_CurrentInstruction->reg1));
         bus.Cycles(1);
         return;
 
-      case Instructions::AddressMode::AM_R_A16: {
+      case AddressMode::R_A16: {
         uint16_t lo = bus.cpuRead(regs.pc);
         bus.Cycles(1);
 
@@ -341,14 +341,14 @@ namespace hijo {
         uint16_t addr = lo | (hi << 8);
 
         regs.pc += 2;
-        fetched_data = bus.cpuRead(addr);
+        m_FetchedData = bus.cpuRead(addr);
         bus.Cycles(1);
 
         return;
       }
 
       default:
-        printf("Unknown Addressing Mode! %d (%02X)\n", cur_inst->mode, cur_opcode);
+        printf("Unknown Addressing Mode! %d (%02X)\n", m_CurrentInstruction->mode, m_CurrentOpcode);
         exit(-7);
     }
   }
@@ -356,14 +356,15 @@ namespace hijo {
   void SharpSM83::FetchInstruction() {
     auto &bus = Gameboy::Get();
 
-    cur_opcode = bus.cpuRead(regs.pc++);
-    cur_inst = &instrs.InstructionByOpcode(cur_opcode);
+    m_CurrentOpcode = bus.cpuRead(regs.pc++);
+    m_CurrentInstruction = &instrs.OpcodeByByte(m_CurrentOpcode);
   }
 
   void SharpSM83::Execute() {
-    auto proc = GetProcessor(cur_inst->type);
+    auto proc = GetProcessor(m_CurrentInstruction->type);
 
     if (!proc) {
+      spdlog::get("console")->warn("No processor for current instruction: {:02X}", m_CurrentInstruction->code);
       return;
     }
 
@@ -373,31 +374,32 @@ namespace hijo {
   bool SharpSM83::Step() {
     auto &bus = Gameboy::Get();
 
-    if (!halted) {
+    if (!m_Halted) {
       FetchInstruction();
       bus.Cycles(1);
       FetchData();
 
-      if (cur_inst == nullptr) {
-        exit(-1);
+      if (m_CurrentInstruction == nullptr) {
+        m_Halted = true;
+        spdlog::get("console")->warn("No instructions for opcode {}", m_CurrentOpcode);
       }
 
       Execute();
     } else {
       bus.Cycles(1);
 
-      if (int_flags) {
-        halted = false;
+      if (m_IF) {
+        m_Halted = false;
       }
     }
 
-    if (int_master_enabled) {
+    if (m_InterruptMasterEnabled) {
       Interrupts::HandleInterrupts(*this);
-      enabling_ime = false;
+      m_EnablingIME = false;
     }
 
-    if (enabling_ime) {
-      int_master_enabled = true;
+    if (m_EnablingIME) {
+      m_InterruptMasterEnabled = true;
     }
 
     return true;
@@ -421,32 +423,32 @@ namespace hijo {
     }
   }
 
-  Instructions::RegisterType SharpSM83::DecodeRegister(uint8_t reg) {
+  Register SharpSM83::DecodeRegister(uint8_t reg) {
     if (reg > 0x7) {
-      return Instructions::RegisterType::RT_NONE;
+      return Register::NONE;
     }
 
-    return rt_lookup[reg];
+    return m_RegisterTypes[reg];
   }
 
-  bool SharpSM83::Is16Bit(const Instructions::RegisterType &t) {
-    return static_cast<uint8_t>(t) > static_cast<uint8_t>(Instructions::RegisterType::RT_AF);
+  bool SharpSM83::Is16Bit(const Register &t) {
+    return static_cast<uint8_t>(t) > static_cast<uint8_t>(Register::AF);
   }
 
   bool SharpSM83::CheckCondition() {
-    bool z = CPU_FLAG_Z;
-    bool c = CPU_FLAG_C;
+    uint8_t z = BIT(regs.f, 7);
+    uint8_t c = BIT(regs.f, 4);
 
-    switch (cur_inst->cond) {
-      case Instructions::ConditionType::CT_NONE:
+    switch (m_CurrentInstruction->cond) {
+      case Condition::NONE:
         return true;
-      case Instructions::ConditionType::CT_C:
+      case Condition::C:
         return c;
-      case Instructions::ConditionType::CT_NC:
+      case Condition::NC:
         return !c;
-      case Instructions::ConditionType::CT_Z:
+      case Condition::Z:
         return z;
-      case Instructions::ConditionType::CT_NZ:
+      case Condition::NZ:
         return !z;
     }
 
@@ -462,8 +464,12 @@ namespace hijo {
         Stack::Push16(regs.pc);
       }
 
+      /*if (addr >= 0xC000 && addr < 0xFE00) {
+        Disassemble(0, 0xFFFF);
+      }*/
+
       regs.pc = addr;
-      //bus.cycles(1);
+      bus.Cycles(1);
     }
   }
 
@@ -478,15 +484,15 @@ namespace hijo {
   void SharpSM83::ProcCB() {
     auto &bus = Gameboy::Get();
 
-    uint8_t op = fetched_data;
-    Instructions::RegisterType reg = DecodeRegister(op & 0b111);
+    uint8_t op = m_FetchedData;
+    Register reg = DecodeRegister(op & 0b111);
     uint8_t bit = (op >> 3) & 0b111;
     uint8_t bit_op = (op >> 6) & 0b11;
-    uint8_t reg_val = Register8(reg);
+    uint8_t reg_val = Reg8(reg);
 
     bus.Cycles(1);
 
-    if (reg == Instructions::RegisterType::RT_HL) {
+    if (reg == Register::HL) {
       bus.Cycles(2);
     }
 
@@ -499,13 +505,13 @@ namespace hijo {
       case 2:
         //RST
         reg_val &= ~(1 << bit);
-        Register8(reg, reg_val);
+        Reg8(reg, reg_val);
         return;
 
       case 3:
         //SET
         reg_val |= (1 << bit);
-        Register8(reg, reg_val);
+        Reg8(reg, reg_val);
         return;
     }
 
@@ -522,7 +528,7 @@ namespace hijo {
           setC = true;
         }
 
-        Register8(reg, result);
+        Reg8(reg, result);
         SetFlags(result == 0, false, false, setC);
       }
         return;
@@ -533,7 +539,7 @@ namespace hijo {
         reg_val >>= 1;
         reg_val |= (old << 7);
 
-        Register8(reg, reg_val);
+        Reg8(reg, reg_val);
         SetFlags(!reg_val, false, false, old & 1);
       }
         return;
@@ -544,7 +550,7 @@ namespace hijo {
         reg_val <<= 1;
         reg_val |= flagC;
 
-        Register8(reg, reg_val);
+        Reg8(reg, reg_val);
         SetFlags(!reg_val, false, false, !!(old & 0x80));
       }
         return;
@@ -556,7 +562,7 @@ namespace hijo {
 
         reg_val |= (flagC << 7);
 
-        Register8(reg, reg_val);
+        Reg8(reg, reg_val);
         SetFlags(!reg_val, false, false, old & 1);
       }
         return;
@@ -566,7 +572,7 @@ namespace hijo {
         uint8_t old = reg_val;
         reg_val <<= 1;
 
-        Register8(reg, reg_val);
+        Reg8(reg, reg_val);
         SetFlags(!reg_val, false, false, !!(old & 0x80));
       }
         return;
@@ -574,7 +580,7 @@ namespace hijo {
       case 5: {
         //SRA
         uint8_t u = (int8_t) reg_val >> 1;
-        Register8(reg, u);
+        Reg8(reg, u);
         SetFlags(!u, 0, 0, reg_val & 1);
       }
         return;
@@ -582,7 +588,7 @@ namespace hijo {
       case 6: {
         //SWAP
         reg_val = ((reg_val & 0xF0) >> 4) | ((reg_val & 0xF) << 4);
-        Register8(reg, reg_val);
+        Reg8(reg, reg_val);
         SetFlags(reg_val == 0, false, false, false);
       }
         return;
@@ -590,7 +596,7 @@ namespace hijo {
       case 7: {
         //SRL
         uint8_t u = reg_val >> 1;
-        Register8(reg, u);
+        Reg8(reg, u);
         SetFlags(!u, 0, 0, reg_val & 1);
       }
         return;
@@ -659,7 +665,7 @@ namespace hijo {
   }
 
   void SharpSM83::ProcHALT() {
-    halted = true;
+    m_Halted = true;
   }
 
   void SharpSM83::ProcRRA() {
@@ -673,99 +679,97 @@ namespace hijo {
   }
 
   void SharpSM83::ProcAND() {
-    regs.a &= fetched_data;
+    regs.a &= m_FetchedData & 0xFF;
     SetFlags(regs.a == 0, 0, 1, 0);
   }
 
   void SharpSM83::ProcXOR() {
-    regs.a ^= fetched_data & 0xFF;
+    regs.a ^= m_FetchedData & 0xFF;
     SetFlags(regs.a == 0, 0, 0, 0);
   }
 
   void SharpSM83::ProcOR() {
-    regs.a |= fetched_data & 0xFF;
+    regs.a |= m_FetchedData & 0xFF;
     SetFlags(regs.a == 0, 0, 0, 0);
   }
 
   void SharpSM83::ProcCP() {
-    int n = (int) regs.a - (int) fetched_data;
+    int n = (int) regs.a - (int) m_FetchedData;
 
     SetFlags(n == 0, 1,
-             ((int) regs.a & 0x0F) - ((int) fetched_data & 0x0F) < 0, n < 0);
+             ((int) regs.a & 0x0F) - ((int) m_FetchedData & 0x0F) < 0, n < 0);
   }
 
   void SharpSM83::ProcDI() {
-    int_master_enabled = false;
+    m_InterruptMasterEnabled = false;
   }
 
   void SharpSM83::ProcEI() {
-    enabling_ime = true;
+    m_EnablingIME = true;
   }
 
   void SharpSM83::ProcLD() {
-    if (dest_is_mem) {
-      //LD (BC), A for instance...
-
-      if (Is16Bit(cur_inst->reg2)) {
-        //if 16 bit register...
-        Gameboy::Get().Cycles(1);
-        Gameboy::Get().cpuWrite16(mem_dest, fetched_data);
+    auto &bus = Gameboy::Get();
+    if (DestinationIsMemory) {
+      if (Is16Bit(m_CurrentInstruction->reg2)) {
+        bus.Cycles(1);
+        bus.cpuWrite16(m_MemoryDestination, m_FetchedData);
       } else {
-        Gameboy::Get().cpuWrite(mem_dest, fetched_data);
+        bus.cpuWrite(m_MemoryDestination, m_FetchedData);
       }
 
-      Gameboy::Get().Cycles(1);
+      bus.Cycles(1);
 
       return;
     }
 
-    if (cur_inst->mode == Instructions::AddressMode::AM_HL_SPR) {
-      uint8_t hflag = (Register(cur_inst->reg2) & 0xF) +
-                      (fetched_data & 0xF) >= 0x10;
+    if (m_CurrentInstruction->mode == AddressMode::HL_SPR) {
+      uint8_t hflag = (Reg(m_CurrentInstruction->reg2) & 0xF) +
+                      (m_FetchedData & 0xF) >= 0x10;
 
-      uint8_t cflag = (Register(cur_inst->reg2) & 0xFF) +
-                      (fetched_data & 0xFF) >= 0x100;
+      uint8_t cflag = (Reg(m_CurrentInstruction->reg2) & 0xFF) +
+                      (m_FetchedData & 0xFF) >= 0x100;
 
       SetFlags(0, 0, hflag, cflag);
-      Register(cur_inst->reg1,
-               Register(cur_inst->reg2) + (int8_t) fetched_data);
+      Reg(m_CurrentInstruction->reg1,
+          Reg(m_CurrentInstruction->reg2) + (int8_t) m_FetchedData);
 
       return;
     }
 
-    Register(cur_inst->reg1, fetched_data);
+    Reg(m_CurrentInstruction->reg1, m_FetchedData);
   }
 
   void SharpSM83::ProcLDH() {
-    if (cur_inst->reg1 == Instructions::RegisterType::RT_A) {
-      Register(cur_inst->reg1, Gameboy::Get().cpuRead(0xFF00 | fetched_data));
+    if (m_CurrentInstruction->reg1 == Register::A) {
+      Reg(m_CurrentInstruction->reg1, Gameboy::Get().cpuRead(0xFF00 | m_FetchedData));
     } else {
-      Gameboy::Get().cpuWrite(mem_dest, regs.a);
+      Gameboy::Get().cpuWrite(m_MemoryDestination, regs.a);
     }
 
     Gameboy::Get().Cycles(1);
   }
 
   void SharpSM83::ProcJP() {
-    GotoAddress(fetched_data, false);
+    GotoAddress(m_FetchedData, false);
   }
 
   void SharpSM83::ProcJR() {
-    int8_t rel = (int8_t) (fetched_data & 0xFF);
+    int8_t rel = (int8_t) (m_FetchedData & 0xFF);
     uint16_t addr = regs.pc + rel;
     GotoAddress(addr, false);
   }
 
   void SharpSM83::ProcCALL() {
-    GotoAddress(fetched_data, true);
+    GotoAddress(m_FetchedData, true);
   }
 
   void SharpSM83::ProcRST() {
-    GotoAddress(cur_inst->param, true);
+    GotoAddress(m_CurrentInstruction->param, true);
   }
 
   void SharpSM83::ProcRET() {
-    if (cur_inst->cond != Instructions::ConditionType::CT_NONE) {
+    if (m_CurrentInstruction->cond != Condition::NONE) {
       Gameboy::Get().Cycles(1);
     }
 
@@ -783,7 +787,7 @@ namespace hijo {
   }
 
   void SharpSM83::ProcRETI() {
-    int_master_enabled = true;
+    m_InterruptMasterEnabled = true;
     ProcRET();
   }
 
@@ -795,19 +799,19 @@ namespace hijo {
 
     uint16_t n = (hi << 8) | lo;
 
-    Register(cur_inst->reg1, n);
+    Reg(m_CurrentInstruction->reg1, n);
 
-    if (cur_inst->reg1 == Instructions::RegisterType::RT_AF) {
-      Register(cur_inst->reg1, n & 0xFFF0);
+    if (m_CurrentInstruction->reg1 == Register::AF) {
+      Reg(m_CurrentInstruction->reg1, n & 0xFFF0);
     }
   }
 
   void SharpSM83::ProcPUSH() {
-    uint16_t hi = (Register(cur_inst->reg1) >> 8) & 0xFF;
+    uint16_t hi = (Reg(m_CurrentInstruction->reg1) >> 8) & 0xFF;
     Gameboy::Get().Cycles(1);
     Stack::Push(hi);
 
-    uint16_t lo = Register(cur_inst->reg1) & 0xFF;
+    uint16_t lo = Reg(m_CurrentInstruction->reg1) & 0xFF;
     Gameboy::Get().Cycles(1);
     Stack::Push(lo);
 
@@ -815,22 +819,22 @@ namespace hijo {
   }
 
   void SharpSM83::ProcINC() {
-    uint16_t val = Register(cur_inst->reg1) + 1;
+    uint16_t val = Reg(m_CurrentInstruction->reg1) + 1;
 
-    if (Is16Bit(cur_inst->reg1)) {
+    if (Is16Bit(m_CurrentInstruction->reg1)) {
       Gameboy::Get().Cycles(1);
     }
 
-    if (cur_inst->reg1 == Instructions::RegisterType::RT_HL && cur_inst->mode == Instructions::AddressMode::AM_MR) {
-      val = Gameboy::Get().cpuRead(Register(Instructions::RegisterType::RT_HL)) + 1;
+    if (m_CurrentInstruction->reg1 == Register::HL && m_CurrentInstruction->mode == AddressMode::MR) {
+      val = Gameboy::Get().cpuRead(Reg(Register::HL)) + 1;
       val &= 0xFF;
-      Gameboy::Get().cpuWrite(Register(Instructions::RegisterType::RT_HL), val);
+      Gameboy::Get().cpuWrite(Reg(Register::HL), val);
     } else {
-      Register(cur_inst->reg1, val);
-      val = Register(cur_inst->reg1);
+      Reg(m_CurrentInstruction->reg1, val);
+      val = Reg(m_CurrentInstruction->reg1);
     }
 
-    if ((cur_opcode & 0x03) == 0x03) {
+    if ((m_CurrentOpcode & 0x03) == 0x03) {
       return;
     }
 
@@ -838,21 +842,21 @@ namespace hijo {
   }
 
   void SharpSM83::ProcDEC() {
-    uint16_t val = Register(cur_inst->reg1) - 1;
+    uint16_t val = Reg(m_CurrentInstruction->reg1) - 1;
 
-    if (Is16Bit(cur_inst->reg1)) {
+    if (Is16Bit(m_CurrentInstruction->reg1)) {
       Gameboy::Get().Cycles(1);
     }
 
-    if (cur_inst->reg1 == Instructions::RegisterType::RT_HL && cur_inst->mode == Instructions::AddressMode::AM_MR) {
-      val = Gameboy::Get().cpuRead(Register(Instructions::RegisterType::RT_HL)) - 1;
-      Gameboy::Get().cpuWrite(Register(Instructions::RegisterType::RT_HL), val);
+    if (m_CurrentInstruction->reg1 == Register::HL && m_CurrentInstruction->mode == AddressMode::MR) {
+      val = Gameboy::Get().cpuRead(Reg(Register::HL)) - 1;
+      Gameboy::Get().cpuWrite(Reg(Register::HL), val);
     } else {
-      Register(cur_inst->reg1, val);
-      val = Register(cur_inst->reg1);
+      Reg(m_CurrentInstruction->reg1, val);
+      val = Reg(m_CurrentInstruction->reg1);
     }
 
-    if ((cur_opcode & 0x0B) == 0x0B) {
+    if ((m_CurrentOpcode & 0x0B) == 0x0B) {
       return;
     }
 
@@ -860,32 +864,32 @@ namespace hijo {
   }
 
   void SharpSM83::ProcSUB() {
-    uint16_t val = Register(cur_inst->reg1) - fetched_data;
+    uint16_t val = Reg(m_CurrentInstruction->reg1) - m_FetchedData;
 
     int z = val == 0;
-    int h = ((int) Register(cur_inst->reg1) & 0xF) - ((int) fetched_data & 0xF) < 0;
-    int c = ((int) Register(cur_inst->reg1)) - ((int) fetched_data) < 0;
+    int h = ((int) Reg(m_CurrentInstruction->reg1) & 0xF) - ((int) m_FetchedData & 0xF) < 0;
+    int c = ((int) Reg(m_CurrentInstruction->reg1)) - ((int) m_FetchedData) < 0;
 
-    Register(cur_inst->reg1, val);
+    Reg(m_CurrentInstruction->reg1, val);
     SetFlags(z, 1, h, c);
   }
 
   void SharpSM83::ProcSBC() {
-    uint8_t val = fetched_data + CPU_FLAG_C;
+    uint8_t val = m_FetchedData + CPU_FLAG_C;
 
-    int z = Register(cur_inst->reg1) - val == 0;
+    int z = Reg(m_CurrentInstruction->reg1) - val == 0;
 
-    int h = ((int) Register(cur_inst->reg1) & 0xF)
-            - ((int) fetched_data & 0xF) - ((int) CPU_FLAG_C) < 0;
-    int c = ((int) Register(cur_inst->reg1))
-            - ((int) fetched_data) - ((int) CPU_FLAG_C) < 0;
+    int h = ((int) Reg(m_CurrentInstruction->reg1) & 0xF)
+            - ((int) m_FetchedData & 0xF) - ((int) CPU_FLAG_C) < 0;
+    int c = ((int) Reg(m_CurrentInstruction->reg1))
+            - ((int) m_FetchedData) - ((int) CPU_FLAG_C) < 0;
 
-    Register(cur_inst->reg1, Register(cur_inst->reg1) - val);
+    Reg(m_CurrentInstruction->reg1, Reg(m_CurrentInstruction->reg1) - val);
     SetFlags(z, 1, h, c);
   }
 
   void SharpSM83::ProcADC() {
-    uint16_t u = fetched_data;
+    uint16_t u = m_FetchedData;
     uint16_t a = regs.a;
     uint16_t c = CPU_FLAG_C;
 
@@ -897,41 +901,105 @@ namespace hijo {
   }
 
   void SharpSM83::ProcADD() {
-    uint32_t val = Register(cur_inst->reg1) + fetched_data;
+    uint32_t val = Reg(m_CurrentInstruction->reg1) + m_FetchedData;
 
-    bool is_16bit = Is16Bit(cur_inst->reg1);
+    bool is_16bit = Is16Bit(m_CurrentInstruction->reg1);
 
     if (is_16bit) {
       Gameboy::Get().Cycles(1);
     }
 
-    if (cur_inst->reg1 == Instructions::RegisterType::RT_SP) {
-      val = Register(cur_inst->reg1) + (int8_t) fetched_data;
+    if (m_CurrentInstruction->reg1 == Register::SP) {
+      val = Reg(m_CurrentInstruction->reg1) + (int8_t) m_FetchedData;
     }
 
     int z = (val & 0xFF) == 0;
-    int h = (Register(cur_inst->reg1) & 0xF) + (fetched_data & 0xF) >= 0x10;
-    int c = (int) (Register(cur_inst->reg1) & 0xFF) + (int) (fetched_data & 0xFF) >= 0x100;
+    int h = (Reg(m_CurrentInstruction->reg1) & 0xF) + (m_FetchedData & 0xF) >= 0x10;
+    int c = (int) (Reg(m_CurrentInstruction->reg1) & 0xFF) + (int) (m_FetchedData & 0xFF) >= 0x100;
 
     if (is_16bit) {
       z = -1;
-      h = (Register(cur_inst->reg1) & 0xFFF) + (fetched_data & 0xFFF) >= 0x1000;
-      uint32_t n = ((uint32_t) Register(cur_inst->reg1)) + ((uint32_t) fetched_data);
+      h = (Reg(m_CurrentInstruction->reg1) & 0xFFF) + (m_FetchedData & 0xFFF) >= 0x1000;
+      uint32_t n = ((uint32_t) Reg(m_CurrentInstruction->reg1)) + ((uint32_t) m_FetchedData);
       c = n >= 0x10000;
     }
 
-    if (cur_inst->reg1 == Instructions::RegisterType::RT_SP) {
+    if (m_CurrentInstruction->reg1 == Register::SP) {
       z = 0;
-      h = (Register(cur_inst->reg1) & 0xF) + (fetched_data & 0xF) >= 0x10;
-      c = (int) (Register(cur_inst->reg1) & 0xFF) + (int) (fetched_data & 0xFF) >= 0x100;
+      h = (Reg(m_CurrentInstruction->reg1) & 0xF) + (m_FetchedData & 0xF) >= 0x10;
+      c = (int) (Reg(m_CurrentInstruction->reg1) & 0xFF) + (int) (m_FetchedData & 0xFF) >= 0x100;
     }
 
-    Register(cur_inst->reg1, val & 0xFFFF);
+    Reg(m_CurrentInstruction->reg1, val & 0xFFFF);
     SetFlags(z, 0, h, c);
   }
 
   uint16_t SharpSM83::reverse(uint16_t n) {
     return ((n & 0xFF00) >> 8) | ((n & 0x00FF) << 8);
+  }
+
+  void SharpSM83::Disassemble(uint16_t start_addr, uint16_t end_addr) {
+    m_Disassembly.clear();
+    m_Disassembly.reserve(0xFFFF);
+
+    auto &bus = Gameboy::Get();
+
+    uint16_t index = 0;
+    while (start_addr < end_addr) {
+      auto byte = bus.cpuRead(start_addr);
+      auto &op = instrs.OpcodeByByte(byte);
+
+      std::string bytes = fmt::format("{:02X}", op.code);
+      std::string code = op.name;
+      std::string mode = instrs.AddressModeLabel(op.mode);
+
+      std::regex u8{"u8"};
+      std::regex i8{"i8"};
+      std::regex u16{"u16"};
+
+      uint8_t low = 0;
+      uint8_t high = 0;
+
+      switch (op.length) {
+        case 2:
+          low = bus.cpuRead(start_addr + 1);
+          bytes += fmt::format(" {:02X}", low);
+          break;
+
+        case 3:
+          low = bus.cpuRead(start_addr + 1);
+          high = bus.cpuRead(start_addr + 2);
+          bytes += fmt::format(" {:02X} {:02X}", low, high);
+          break;
+
+        default:
+          break;
+      }
+
+      std::smatch m;
+
+      if (std::regex_search(code, m, u8)) {
+        std::string lowFormatted = fmt::format("#{:02X}", low);
+        code.replace(m[0].first, m[0].second, lowFormatted);
+      } else if (std::regex_search(code, m, i8)) {
+        uint32_t addr = (start_addr + op.length) + (int8_t) low;
+        std::string addrString = fmt::format("${:04X} ; [{}]", addr, (int8_t) low);
+        code.replace(m[0].first, m[0].second, addrString);
+      } else if (std::regex_search(code, m, u16)) {
+        std::string addr = fmt::format("${:02X}{:02X}", high, low);
+        code.replace(m[0].first, m[0].second, addr);
+      }
+
+      m_Disassembly.push_back({
+                                  start_addr,
+                                  index++,
+                                  code,
+                                  bytes,
+                                  mode
+                              });
+
+      start_addr += op.length;
+    }
   }
 
 } // hijo

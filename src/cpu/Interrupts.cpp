@@ -28,8 +28,8 @@ namespace hijo {
       HandleInterrupt(cpu, addr);
       uint8_t flags = cpu.IntFlags();
       cpu.IntFlags(flags & ~it);
-      cpu.halted = false;
-      cpu.int_master_enabled = false;
+      cpu.m_Halted = false;
+      cpu.m_InterruptMasterEnabled = false;
 
       return true;
     }

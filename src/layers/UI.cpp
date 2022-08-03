@@ -159,7 +159,7 @@ namespace hijo {
     }
 
     if (m_ShowDisassembly) {
-      // Disassembly();
+      Disassembly();
     }
 
     if (m_ShowRegisters) {
@@ -312,80 +312,80 @@ namespace hijo {
   }
 
   void UI::Disassembly() {
-    /* Gameboy *gb = app.System<Gameboy>();
-     auto &cpu = gb->m_Cpu;
+    Gameboy *gb = app.System<Gameboy>();
+    auto &cpu = gb->m_Cpu;
 
-     if (cpu.Disassembly().empty()) {
-       cpu.Disassemble(0, (64 * 1024) - 1);
-     }
+    if (cpu.m_Disassembly.empty()) {
+      cpu.Disassemble(0, (64 * 1024) - 1);
+    }
 
-     if (!ImGui::Begin("Disassembly", &m_ShowDisassembly)) {
-       ImGui::End();
-     } else {
-       if (ImGui::BeginTable("disa", 4, ImGuiTableFlags_ScrollY |
-                                        ImGuiTableFlags_BordersOuterH |
-                                        ImGuiTableFlags_BordersOuterV |
-                                        ImGuiTableFlags_RowBg)) {
-         auto &lines = cpu.Disassembly();
+    if (!ImGui::Begin("Disassembly", &m_ShowDisassembly)) {
+      ImGui::End();
+    } else {
+      if (ImGui::BeginTable("disa", 4, ImGuiTableFlags_ScrollY |
+                                       ImGuiTableFlags_BordersOuterH |
+                                       ImGuiTableFlags_BordersOuterV |
+                                       ImGuiTableFlags_RowBg)) {
+        auto &lines = cpu.m_Disassembly;
 
-         ImGui::TableSetupColumn("Address", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-         ImGui::TableSetupColumn("Bytes", ImGuiTableColumnFlags_WidthFixed, 70.0f);
-         ImGui::TableSetupColumn("Instruction", ImGuiTableColumnFlags_WidthStretch);
-         ImGui::TableSetupColumn("Addr. Mode", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+        ImGui::TableSetupColumn("Address", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+        ImGui::TableSetupColumn("Bytes", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+        ImGui::TableSetupColumn("Instruction", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("Addr. Mode", ImGuiTableColumnFlags_WidthFixed, 40.0f);
 
-         ImGuiListClipper clipper;
-         clipper.Begin(lines.size());
+        ImGuiListClipper clipper;
+        clipper.Begin(lines.size());
 
-         while (clipper.Step()) {
-           for (auto item = clipper.DisplayStart; item < clipper.DisplayEnd; item++) {
-             auto &regs = cpu.GetRegisters();
+        while (clipper.Step()) {
+          for (auto item = clipper.DisplayStart; item < clipper.DisplayEnd; item++) {
+            auto &regs = cpu.regs;
 
-             auto &line = lines[item];
-             ImGui::TableNextRow();
+            auto &line = lines[item];
+            ImGui::TableNextRow();
 
-             if (line.addr == regs.pc) {
-               ImU32 row_bg_color = ImGui::GetColorU32(ImVec4(0.18f, 0.47f, 0.59f, 0.65f));
-               ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, row_bg_color);
-             }
+            if (line.addr == regs.pc) {
+              ImU32 row_bg_color = ImGui::GetColorU32(ImVec4(0.18f, 0.47f, 0.59f, 0.65f));
+              ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, row_bg_color);
+            }
 
-             ImGui::TableSetColumnIndex(0);
-             ImGui::TextUnformatted(fmt::format("${:04X}", line.addr).c_str());
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextUnformatted(fmt::format("${:04X}", line.addr).c_str());
 
-             ImGui::TableSetColumnIndex(1);
-             ImGui::TextUnformatted(fmt::format("{}", line.bytes).c_str());
+            ImGui::TableSetColumnIndex(1);
+            ImGui::TextUnformatted(fmt::format("{}", line.bytes).c_str());
 
-             ImGui::TableSetColumnIndex(2);
-             ImGui::TextUnformatted(line.text.c_str());
+            ImGui::TableSetColumnIndex(2);
+            ImGui::TextUnformatted(line.text.c_str());
 
-             ImGui::TableSetColumnIndex(3);
-             ImGui::TextUnformatted(fmt::format("[{}]", line.mode.c_str()).c_str());
-           }
-         }
+            ImGui::TableSetColumnIndex(3);
+            ImGui::TextUnformatted(fmt::format("[{}]", line.mode.c_str()).c_str());
+          }
+        }
 
-         auto &regs = cpu.GetRegisters();
+        auto &regs = cpu.regs;
 
 
-         if (regs.pc != m_PrevPC) {
-           auto it = std::find_if(
-               lines.begin(),
-               lines.end(),
-               [regs](const auto &line) {
-                 return line.addr == regs.pc;
-               });
+        if (regs.pc != m_PrevPC) {
+          auto it = std::find_if(
+              lines.begin(),
+              lines.end(),
+              [regs](const auto &line) {
+                return line.addr == regs.pc;
+              });
 
-           if (it != std::end(lines)) {
-             auto size = ImGui::GetWindowSize();
-             ImGui::SetScrollY(
-                 (clipper.ItemsHeight * it->index - (size.y / 2) - (clipper.ItemsHeight / clipper.ItemsCount)));
-             m_PrevPC = regs.pc;
-           }
-         }
+          if (it != std::end(lines)) {
+            auto size = ImGui::GetWindowSize();
+            ImGui::SetScrollY(
+                (clipper.ItemsHeight * it->index - (size.y / 2) - (clipper.ItemsHeight / clipper.ItemsCount)));
+            m_PrevPC = regs.pc;
+          }
+        }
 
-         ImGui::EndTable();
-       }
+        ImGui::EndTable();
+      }
 
-       ImGui::End();
-     }*/
+      ImGui::End();
+    }
   }
 
   void UI::Registers() {
@@ -401,7 +401,7 @@ namespace hijo {
       bool H = CPU_FLAG_H;
       bool C = CPU_FLAG_C;
 
-      bool MasterInterrupt = cpu.int_master_enabled;
+      bool MasterInterrupt = cpu.m_InterruptMasterEnabled;
 
       ImGui::BeginTable("flagsbtnscycles", 2);
       ImGui::TableSetupColumn("btns");
