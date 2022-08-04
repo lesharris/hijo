@@ -56,6 +56,8 @@ namespace hijo::Input {
 
     void HandleActions();
 
+    void HandlePressedActions();
+
     [[maybe_unused]] [[nodiscard]] Modifier GetModifierState() const;
 
     void SetModifierState(int key);
@@ -73,7 +75,7 @@ namespace hijo::Input {
   private:
     static const std::unordered_map<int, char> m_PrintableKeys;
     static const std::unordered_map<int, char> m_ShiftedValue;
-    
+
   private:
     Mapping m_Mapping;
 

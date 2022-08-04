@@ -57,124 +57,199 @@ namespace hijo {
 
   void Gameboy::cpuWrite(uint16_t addr, uint8_t data) {
     if (addr < 0x8000) {
-      // Write to rom, configure mapper eventually.
-    } else if (addr >= 0x8000 && addr < 0xA000) {
+      //ROM Data
+      //cart_write(address, value);
+    } else if (addr < 0xA000) {
+      //Char/Map Data
       m_PPU.VRAMWrite(addr, data);
-    } else if (addr >= 0xA000 && addr < 0xC000) {
+    } else if (addr < 0xC000) {
+      //EXT-RAM
       m_ExtRam[addr & 0x1FFF] = data;
-    } else if (addr >= 0xC000 && addr < 0xFE00) {
+    } else if (addr < 0xE000) {
+      //WRAM
+      m_WorkRam[addr & 0x1FFF] = data;
+    } else if (addr < 0xFE00) {
       m_WorkRam[addr & 0x1FFF] = data;
     } else if (addr >= 0xFE00 && addr < 0xFEA0) {
-      // OAM
-
+      //OAM
       if (m_DMA.Transferring()) {
         return;
       }
 
       m_PPU.OAMWrite(addr, data);
-    } else if (addr >= 0xFEA0 && addr < 0xFF00) {
-      // Unusable
-    } else if (addr >= 0xFF00 && addr < 0xFF80) {
-      switch (addr) {
-        case 0xFF00:
-          break;
-
-        case 0xFF01:
-          m_Serial[0] = data;
-          m_Buffer.push_back((char) m_Serial[0]);
-          spdlog::get("console")->info("\n{}", m_Buffer);
-          break;
-
-        case 0xFF02:
-          m_Serial[1] = data;
-          break;
-
-        case 0xFF04:
-        case 0xFF05:
-        case 0xFF06:
-        case 0xFF07:
-          m_Timer.Write(addr, data);
-          break;
-
-        case 0xFF0F:
-          m_Cpu.IntFlags(data);
-          break;
-
-        default:
-          if (addr >= 0xFF10 && addr <= 0xFF3F) {
-            // Sound
-          }
-
-          if (addr >= 0xFF40 && addr <= 0xFF4B) {
-            LCD::Get().Write(addr, data);
-          }
-
-          if (addr >= 0xFF80 && addr < 0xFFFF) {
-            m_HighRam[addr & 0x7F] = data;
-          }
-          break;
+    } else if (addr < 0xFF00) {
+      //unusable reserved
+    } else if (addr < 0xFF80) {
+      //IO Registers...
+      if (addr == 0xFF00) {
+        m_Controller.SetSelected(data);
+        return;
       }
+
+      if (addr == 0xFF01) {
+        m_Serial[0] = data;
+        if (m_SerialTransfer)
+          m_Buffer.push_back((char) m_Serial[0]);
+        return;
+      }
+
+      if (addr == 0xFF02) {
+        m_Serial[1] = data;
+        if (!m_SerialTransfer && BIT(m_Serial[1], 7)) {
+          m_SerialTransfer = true;
+          m_Buffer.clear();
+        } else if (m_SerialTransfer && !(BIT(m_Serial[1], 7))) {
+          spdlog::get("console")->info("\n{}", m_Buffer);
+          m_SerialTransfer = false;
+        }
+        return;
+      }
+
+      if (BETWEEN(addr, 0xFF04, 0xFF07)) {
+        m_Timer.Write(addr, data);
+        return;
+      }
+
+      if (addr == 0xFF0F) {
+        m_Cpu.IntFlags(data);
+        return;
+      }
+
+      if (BETWEEN(addr, 0xFF10, 0xFF3F)) {
+        //ignore sound
+        return;
+      }
+
+      if (BETWEEN(addr, 0xFF40, 0xFF4B)) {
+        LCD::Get().Write(addr, data);
+        return;
+      }
+
+      if (addr == 0xFF4F) {
+        // CGB Vram Bank Select
+        return;
+      }
+
+      if (addr == 0xFF50) {
+        // Boot rom
+        return;
+      }
+
+      if (BETWEEN(addr, 0xFF51, 0xFF55)) {
+        // CGB Vram DATA
+        return;
+      }
+
+      if (BETWEEN(addr, 0xFF68, 0xFF69)) {
+        // CGB BG/Obj Pals
+        return;
+      }
+
+      if (BETWEEN(addr, 0xFF70, 0xFF7F)) {
+        // CGB WRAM Bank Select
+        return;
+      }
+
+      spdlog::get("console")->info("UNSUPPORTED bus_write({:04X})", addr);
     } else if (addr == 0xFFFF) {
+      //CPU SET ENABLE REGISTER
+
       m_Cpu.IERegister(data);
+    } else {
+      m_HighRam[addr & 0x7F] = data;
     }
   }
 
   uint8_t Gameboy::cpuRead(uint16_t addr, bool) {
     if (addr < 0x8000) {
+      //ROM Data
       return m_Cartridge->Data()[addr];
-    } else if (addr >= 0x8000 && addr < 0xA000) {
+    } else if (addr < 0xA000) {
+      //Char/Map Data
       return m_PPU.VRAMRead(addr);
-    } else if (addr >= 0xA000 && addr < 0xC000) {
+    } else if (addr < 0xC000) {
+      //Cartridge RAM
       return m_ExtRam[addr & 0x1FFF];
-    } else if (addr >= 0xC000 && addr < 0xFE00) {
+    } else if (addr < 0xE000) {
+      //WRAM (Working RAM)
+      return m_WorkRam[addr & 0x1FFF];
+    } else if (addr < 0xFE00) {
       return m_WorkRam[addr & 0x1FFF];
     } else if (addr >= 0xFE00 && addr < 0xFEA0) {
-      // OAM
+      //OAM
       if (m_DMA.Transferring()) {
         return 0xFF;
       }
 
       return m_PPU.OAMRead(addr);
-    } else if (addr >= 0xFEA0 && addr < 0xFF00) {
-      // Unusable
+    } else if (addr < 0xFF00) {
+      //reserved unusable...
       return 0;
-    } else if (addr >= 0xFF00 && addr < 0xFF80) {
-      switch (addr) {
-        case 0xFF00:  // Gamepad
-          return 0xFF;
-
-        case 0xFF01:
-          return m_Serial[0];
-
-        case 0xFF02:
-          return m_Serial[1];
-
-        case 0xFF04:
-        case 0xFF05:
-        case 0xFF06:
-        case 0xFF07:
-          return m_Timer.Read(addr);
-
-        case 0xFF0F:
-          return m_Cpu.IntFlags();
-
-        default:
-          if (addr >= 0xFF10 && addr <= 0xFF3F) {
-            // Sound
-            return 0;
-          }
-
-          if (addr >= 0xFF40 && addr <= 0xFF4B) {
-            return LCD::Get().Read(addr);
-          }
+    } else if (addr < 0xFF80) {
+      //IO Registers...
+      if (addr == 0xFF00) {
+        return m_Controller.Output();
       }
-      // Notify?
+
+      if (addr == 0xFF01) {
+        return m_Serial[0];
+      }
+
+      if (addr == 0xFF02) {
+        return m_Serial[1];
+      }
+
+      if (BETWEEN(addr, 0xFF04, 0xFF07)) {
+        return m_Timer.Read(addr);
+      }
+
+      if (addr == 0xFF0F) {
+        return m_Cpu.IntFlags();
+      }
+
+      if (BETWEEN(addr, 0xFF10, 0xFF3F)) {
+        //ignore sound
+        return 0;
+      }
+
+      if (BETWEEN(addr, 0xFF40, 0xFF4B)) {
+        return LCD::Get().Read(addr);
+      }
+
+      if (addr == 0xFF4F) {
+        // CGB Vram Bank Select
+        return 0;
+      }
+
+      if (addr == 0xFF50) {
+        // Boot rom
+        return 0;
+      }
+
+      if (BETWEEN(addr, 0xFF51, 0xFF55)) {
+        // CGB Vram DATA
+        return 0;
+      }
+
+      if (BETWEEN(addr, 0xFF68, 0xFF69)) {
+        // CGB BG/Obj Pals
+        return 0;
+      }
+
+      if (BETWEEN(addr, 0xFF70, 0xFF7F)) {
+        // CGB WRAM Bank Select
+        return 0;
+      }
+
+      spdlog::get("console")->info("UNSUPPORTED bus_read({:04X})\n", addr);
       return 0;
-    } else if (addr >= 0xFF80 && addr < 0xFFFF) {
-      return m_HighRam[addr & 0x7F];
     } else if (addr == 0xFFFF) {
+      //CPU ENABLE REGISTER...
       return m_Cpu.IERegister();
     }
+
+    //NO_IMPL
+    return m_HighRam[addr & 0x7F];
   }
 
   void Gameboy::Update(double) {

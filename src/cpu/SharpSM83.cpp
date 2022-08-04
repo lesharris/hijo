@@ -436,8 +436,8 @@ namespace hijo {
   }
 
   bool SharpSM83::CheckCondition() {
-    uint8_t z = BIT(regs.f, 7);
-    uint8_t c = BIT(regs.f, 4);
+    uint8_t z = CPU_FLAG_Z();
+    uint8_t c = CPU_FLAG_C();
 
     switch (m_CurrentInstruction->cond) {
       case Condition::NONE:
@@ -515,7 +515,7 @@ namespace hijo {
         return;
     }
 
-    bool flagC = CPU_FLAG_C;
+    bool flagC = CPU_FLAG_C();
 
     switch (bit) {
       case 0: {
@@ -622,7 +622,7 @@ namespace hijo {
 
   void SharpSM83::ProcRLA() {
     uint8_t u = regs.a;
-    uint8_t cf = CPU_FLAG_C;
+    uint8_t cf = CPU_FLAG_C();
     uint8_t c = (u >> 7) & 1;
 
     regs.a = (u << 1) | cf;
@@ -630,23 +630,23 @@ namespace hijo {
   }
 
   void SharpSM83::ProcSTOP() {
-
+    spdlog::get("console")->info("Stop Called");
   }
 
   void SharpSM83::ProcDAA() {
     uint8_t u = 0;
     int fc = 0;
 
-    if (CPU_FLAG_H || (!CPU_FLAG_N && (regs.a & 0xF) > 9)) {
+    if (CPU_FLAG_H() || (!CPU_FLAG_N() && (regs.a & 0xF) > 9)) {
       u = 6;
     }
 
-    if (CPU_FLAG_C || (!CPU_FLAG_N && regs.a > 0x99)) {
+    if (CPU_FLAG_C() || (!CPU_FLAG_N() && regs.a > 0x99)) {
       u |= 0x60;
       fc = 1;
     }
 
-    regs.a += CPU_FLAG_N ? -u : u;
+    regs.a += CPU_FLAG_N() ? -u : u;
 
     SetFlags(regs.a == 0, -1, 0, fc);
   }
@@ -661,7 +661,7 @@ namespace hijo {
   }
 
   void SharpSM83::ProcCCF() {
-    SetFlags(-1, 0, 0, CPU_FLAG_C ^ 1);
+    SetFlags(-1, 0, 0, CPU_FLAG_C() ^ 1);
   }
 
   void SharpSM83::ProcHALT() {
@@ -669,7 +669,7 @@ namespace hijo {
   }
 
   void SharpSM83::ProcRRA() {
-    uint8_t carry = CPU_FLAG_C;
+    uint8_t carry = CPU_FLAG_C();
     uint8_t new_c = regs.a & 1;
 
     regs.a >>= 1;
@@ -741,13 +741,14 @@ namespace hijo {
   }
 
   void SharpSM83::ProcLDH() {
+    auto &bus = Gameboy::Get();
     if (m_CurrentInstruction->reg1 == Register::A) {
-      Reg(m_CurrentInstruction->reg1, Gameboy::Get().cpuRead(0xFF00 | m_FetchedData));
+      Reg(m_CurrentInstruction->reg1, bus.cpuRead(0xFF00 | m_FetchedData));
     } else {
-      Gameboy::Get().cpuWrite(m_MemoryDestination, regs.a);
+      bus.cpuWrite(m_MemoryDestination, regs.a);
     }
 
-    Gameboy::Get().Cycles(1);
+    bus.Cycles(1);
   }
 
   void SharpSM83::ProcJP() {
@@ -769,20 +770,21 @@ namespace hijo {
   }
 
   void SharpSM83::ProcRET() {
+    auto &bus = Gameboy::Get();
     if (m_CurrentInstruction->cond != Condition::NONE) {
-      Gameboy::Get().Cycles(1);
+      bus.Cycles(1);
     }
 
     if (CheckCondition()) {
       uint16_t lo = Stack::Pop();
-      Gameboy::Get().Cycles(1);
+      bus.Cycles(1);
       uint16_t hi = Stack::Pop();
-      Gameboy::Get().Cycles(1);
+      bus.Cycles(1);
 
       uint16_t n = (hi << 8) | lo;
       regs.pc = n;
 
-      Gameboy::Get().Cycles(1);
+      bus.Cycles(1);
     }
   }
 
@@ -792,10 +794,12 @@ namespace hijo {
   }
 
   void SharpSM83::ProcPOP() {
+    auto &bus = Gameboy::Get();
+
     uint16_t lo = Stack::Pop();
-    Gameboy::Get().Cycles(1);
+    bus.Cycles(1);
     uint16_t hi = Stack::Pop();
-    Gameboy::Get().Cycles(1);
+    bus.Cycles(1);
 
     uint16_t n = (hi << 8) | lo;
 
@@ -807,28 +811,32 @@ namespace hijo {
   }
 
   void SharpSM83::ProcPUSH() {
+    auto &bus = Gameboy::Get();
+
     uint16_t hi = (Reg(m_CurrentInstruction->reg1) >> 8) & 0xFF;
-    Gameboy::Get().Cycles(1);
+    bus.Cycles(1);
     Stack::Push(hi);
 
     uint16_t lo = Reg(m_CurrentInstruction->reg1) & 0xFF;
-    Gameboy::Get().Cycles(1);
+    bus.Cycles(1);
     Stack::Push(lo);
 
-    Gameboy::Get().Cycles(1);
+    bus.Cycles(1);
   }
 
   void SharpSM83::ProcINC() {
+    auto &bus = Gameboy::Get();
+
     uint16_t val = Reg(m_CurrentInstruction->reg1) + 1;
 
     if (Is16Bit(m_CurrentInstruction->reg1)) {
-      Gameboy::Get().Cycles(1);
+      bus.Cycles(1);
     }
 
     if (m_CurrentInstruction->reg1 == Register::HL && m_CurrentInstruction->mode == AddressMode::MR) {
-      val = Gameboy::Get().cpuRead(Reg(Register::HL)) + 1;
+      val = bus.cpuRead(Reg(Register::HL)) + 1;
       val &= 0xFF;
-      Gameboy::Get().cpuWrite(Reg(Register::HL), val);
+      bus.cpuWrite(Reg(Register::HL), val);
     } else {
       Reg(m_CurrentInstruction->reg1, val);
       val = Reg(m_CurrentInstruction->reg1);
@@ -842,15 +850,17 @@ namespace hijo {
   }
 
   void SharpSM83::ProcDEC() {
+    auto &bus = Gameboy::Get();
+
     uint16_t val = Reg(m_CurrentInstruction->reg1) - 1;
 
     if (Is16Bit(m_CurrentInstruction->reg1)) {
-      Gameboy::Get().Cycles(1);
+      bus.Cycles(1);
     }
 
     if (m_CurrentInstruction->reg1 == Register::HL && m_CurrentInstruction->mode == AddressMode::MR) {
-      val = Gameboy::Get().cpuRead(Reg(Register::HL)) - 1;
-      Gameboy::Get().cpuWrite(Reg(Register::HL), val);
+      val = bus.cpuRead(Reg(Register::HL)) - 1;
+      bus.cpuWrite(Reg(Register::HL), val);
     } else {
       Reg(m_CurrentInstruction->reg1, val);
       val = Reg(m_CurrentInstruction->reg1);
@@ -875,14 +885,14 @@ namespace hijo {
   }
 
   void SharpSM83::ProcSBC() {
-    uint8_t val = m_FetchedData + CPU_FLAG_C;
+    uint8_t val = m_FetchedData + CPU_FLAG_C();
 
     int z = Reg(m_CurrentInstruction->reg1) - val == 0;
 
     int h = ((int) Reg(m_CurrentInstruction->reg1) & 0xF)
-            - ((int) m_FetchedData & 0xF) - ((int) CPU_FLAG_C) < 0;
+            - ((int) m_FetchedData & 0xF) - ((int) CPU_FLAG_C()) < 0;
     int c = ((int) Reg(m_CurrentInstruction->reg1))
-            - ((int) m_FetchedData) - ((int) CPU_FLAG_C) < 0;
+            - ((int) m_FetchedData) - ((int) CPU_FLAG_C()) < 0;
 
     Reg(m_CurrentInstruction->reg1, Reg(m_CurrentInstruction->reg1) - val);
     SetFlags(z, 1, h, c);
@@ -891,7 +901,7 @@ namespace hijo {
   void SharpSM83::ProcADC() {
     uint16_t u = m_FetchedData;
     uint16_t a = regs.a;
-    uint16_t c = CPU_FLAG_C;
+    uint16_t c = CPU_FLAG_C();
 
     regs.a = (a + u + c) & 0xFF;
 

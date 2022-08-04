@@ -11,6 +11,7 @@
 #include "cpu/DMA.h"
 #include "cartridge/Cartridge.h"
 #include "display/PPU.h"
+#include "input/Controller.h"
 
 namespace hijo {
 
@@ -88,11 +89,14 @@ namespace hijo {
     uint8_t m_HighRam[127];
     uint8_t m_Serial[2];
 
+    bool m_SerialTransfer = false;
+
     SharpSM83 m_Cpu;
     Timer m_Timer;
     PPU m_PPU;
     DMA m_DMA;
     std::shared_ptr<Cartridge> m_Cartridge;
+    Controller m_Controller;
 
     uint16_t m_TargetAddr = 0;
     bool m_TargetActive = false;

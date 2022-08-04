@@ -176,11 +176,22 @@ namespace hijo {
 
     void ProcADD();
 
-#define CPU_FLAG_Z BIT(regs.f, 7)
-#define CPU_FLAG_N BIT(regs.f, 6)
-#define CPU_FLAG_H BIT(regs.f, 5)
-#define CPU_FLAG_C BIT(regs.f, 4)
+    uint8_t CPU_FLAG_Z() {
+      return BIT(regs.f, 7);
+    }
 
+    uint8_t CPU_FLAG_N() {
+      return BIT(regs.f, 6);
+    }
+
+    uint8_t CPU_FLAG_H() {
+      return BIT(regs.f, 5);
+    }
+
+    uint8_t CPU_FLAG_C() {
+      return BIT(regs.f, 4);
+    }
+    
   private:
     Registers regs;
     Instructions instrs;

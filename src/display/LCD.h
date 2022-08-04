@@ -54,7 +54,7 @@ namespace hijo {
   public:
     uint8_t Read(uint16_t addr);
 
-    void Write(uint8_t addr, uint8_t data);
+    void Write(uint16_t addr, uint8_t data);
 
     Registers &Regs();
 
@@ -89,7 +89,7 @@ namespace hijo {
 
   public:
     void Reset();
-    
+
   private:
     void PaletteUpdate(uint8_t data, uint8_t palette);
 

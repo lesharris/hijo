@@ -2,6 +2,14 @@
 
 namespace hijo::Input {
   enum class ActionType {
-    None
+    None,
+    Up,
+    Down,
+    Left,
+    Right,
+    A,
+    B,
+    Select,
+    Start
   };
 }

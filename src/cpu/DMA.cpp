@@ -22,8 +22,11 @@ namespace hijo {
 
     auto &bus = Gameboy::Get();
     auto &ppu = bus.m_PPU;
+    
+    uint16_t addr = (value * 0x100) + byte;
 
-    ppu.OAMWrite(byte, bus.cpuRead(value * 0x100) + byte);
+    ppu.OAMWrite(0xFE00 | byte, bus.cpuRead(addr));
+
     byte++;
     active = byte < 0xA0;
   }

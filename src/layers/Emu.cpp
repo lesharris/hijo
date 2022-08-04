@@ -13,25 +13,25 @@ namespace hijo {
     //m_GB.InsertCartridge("daa.gb");
 
     //m_GB.InsertCartridge("instr_timing.gb");
-    //m_GB.InsertCartridge("07-jr,jp,call,ret,rst.gb");
 
-    //m_GB.InsertCartridge("01-special.gb");
-    //m_GB.InsertCartridge("02-interrupts.gb"); // PASSE
-    m_GB.InsertCartridge("03-op sp,hl.gb");
-    // m_GB.InsertCartridge("04-op r,imm.gb");
-    //m_GB.InsertCartridge("05-op rp.gb");
-    //m_GB.InsertCartridge("06-ld r,r.gb");
-    //m_GB.InsertCartridge("08-misc instrs.gb");
-    //m_GB.InsertCartridge("09-op r,r.gb");
-    //m_GB.InsertCartridge("10-bit ops.gb");
-    //m_GB.InsertCartridge("11-op a,(hl).gb");
+    //m_GB.InsertCartridge("01-special.gb"); // PASSED
+    //m_GB.InsertCartridge("02-interrupts.gb"); // PASSED
+    //m_GB.InsertCartridge("03-op sp,hl.gb"); // PASSED
+    //m_GB.InsertCartridge("04-op r,imm.gb"); // PASSED
+    //m_GB.InsertCartridge("05-op rp.gb"); // PASSED
+    //m_GB.InsertCartridge("06-ld r,r.gb"); // PASSED
+    //m_GB.InsertCartridge("07-jr,jp,call,ret,rst.gb"); // PASSED
+    //m_GB.InsertCartridge("08-misc instrs.gb"); // PASSED
+    //m_GB.InsertCartridge("09-op r,r.gb"); // PASSED
+    //m_GB.InsertCartridge("10-bit ops.gb"); // PASSED
+    //m_GB.InsertCartridge("11-op a,(hl).gb"); // PASSED
 
     //m_GB.InsertCartridge("cpu_instrs.gb");
 
     //m_GB.InsertCartridge("tetris.gb");
-    //m_GB.InsertCartridge("drmario.gb");
-    //m_GB.InsertCartridge("alleyway.gb");
-    //m_GB.InsertCartridge("dmg-acid2.gb");
+    m_GB.InsertCartridge("drmario.gb");
+    // m_GB.InsertCartridge("alleyway.gb");
+    //m_GB.InsertCartridge("dmg-acid2.gb"); // PASSED
 
     EventManager::Get().Attach<
         Events::KeyPressed,

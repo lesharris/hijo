@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "common/common.h"
+
 namespace hijo {
 
   class PPU {
@@ -45,14 +47,32 @@ namespace hijo {
       uint8_t y;
       uint8_t x;
       uint8_t tile;
-
-      uint8_t f_cgb_pn: 3;
-      uint8_t f_cgb_vram_bank: 1;
-      uint8_t f_pn: 1;
-      uint8_t f_x_flip: 1;
-      uint8_t f_y_flip: 1;
-      uint8_t f_bgp: 1;
+      uint8_t flags;
     };
+
+    static uint8_t OAMEntryCGBPalette(const OAMEntry &entry) {
+      return entry.flags & 0x3;
+    };
+
+    static bool OAMEntryCGBVramBank(const OAMEntry &entry) {
+      return BIT(entry.flags, 3);
+    }
+
+    static bool OAMEntryPaletteNumber(const OAMEntry &entry) {
+      return BIT(entry.flags, 4);
+    }
+
+    static bool OAMEntryXFlip(const OAMEntry &entry) {
+      return BIT(entry.flags, 5);
+    }
+
+    static bool OAMEntryYFlip(const OAMEntry &entry) {
+      return BIT(entry.flags, 6);
+    }
+
+    static bool OAMEntryBackgroundPriority(const OAMEntry &entry) {
+      return BIT(entry.flags, 7);
+    }
 
     /*
  Bit7   BG and Window over OBJ (0=No, 1=BG and Window colors 1-3 over the OBJ)
@@ -72,6 +92,8 @@ namespace hijo {
     PPU();
 
   public:
+    void Init();
+    
     void Tick();
 
     void OAMWrite(uint16_t addr, uint8_t data);

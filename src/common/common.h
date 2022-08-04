@@ -28,4 +28,6 @@ namespace hijo {
   uint8_t BIT(uint8_t data, uint8_t number);
 
   void BIT_SET(uint8_t &data, uint8_t number, bool isSet);
+
+  bool BETWEEN(uint16_t addr, uint16_t start_addr, uint16_t end_addr);
 }

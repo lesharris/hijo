@@ -33,6 +33,8 @@ namespace hijo {
 
     RenderTexture &GetTileTexture() { return m_TileTexture; }
 
+    RenderTexture &GetPackedTileTexture() { return m_PackedTileTexture; }
+
     int32_t ScreenWidth() {
       return m_ScreenWidth;
     }
@@ -99,6 +101,7 @@ namespace hijo {
     Camera2D m_Camera{};
     RenderTexture m_RenderTexture;
     RenderTexture m_TileTexture;
+    RenderTexture m_PackedTileTexture;
 
     class System *m_System = nullptr;
   };

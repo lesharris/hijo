@@ -42,6 +42,8 @@ namespace hijo {
 
     void Tiles();
 
+    void OAM();
+
   private:
     ImVec2 GetLargestSizeForViewport();
 
@@ -53,7 +55,7 @@ namespace hijo {
   private:
     Hijo &app = Hijo::Get();
 
-    bool m_ShowDemo = true;
+    bool m_ShowDemo = false;
     bool m_ShowEmu = true;
     bool m_ShowRom = true;
     bool m_ShowWorkRam = true;
@@ -62,6 +64,7 @@ namespace hijo {
     bool m_ShowTiles = true;
     bool m_ShowDisassembly = true;
     bool m_ShowRegisters = true;
+    bool m_ShowOAM = true;
 
     ImVec2 m_PreviousWindowSize{0, 0};
     ImVec2 m_PreviousMousePosition{0, 0};

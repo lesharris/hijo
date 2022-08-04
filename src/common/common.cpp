@@ -11,4 +11,8 @@ namespace hijo {
     else
       data &= ~(1 << number);
   }
+
+  bool BETWEEN(uint16_t a, uint16_t b, uint16_t c) {
+    return (a >= b) && (a <= c);
+  }
 }

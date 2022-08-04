@@ -62,103 +62,28 @@ namespace hijo {
   }
 
   uint8_t LCD::Read(uint16_t addr) {
-    switch (addr) {
-      case 0xFF40:
-        return regs.LCDC;
+    uint8_t offset = (addr - 0xFF40);
+    uint8_t *p = (uint8_t *) &regs;
 
-      case 0xFF41:
-        return regs.LCDS;
-
-      case 0xFF42:
-        return regs.SCRY;
-
-      case 0xFF43:
-        return regs.SCRX;
-
-      case 0xFF44:
-        return regs.LY;
-
-      case 0xFF45:
-        return regs.LYCP;
-
-      case 0xFF46:
-        return regs.DMA;
-
-      case 0xFF47:
-        return regs.BG_PALETTE;
-
-      case 0xFF48:
-        return regs.OBJ_PALETTE[0];
-
-      case 0xFF49:
-        return regs.OBJ_PALETTE[1];
-
-      case 0xFF4A:
-        return regs.WINY;
-
-      case 0xFF4B:
-        return regs.WINX;
-
-      default:
-        return 0; // Notify on this
-    }
+    return p[offset];
   }
 
-  void LCD::Write(uint8_t addr, uint8_t data) {
-    switch (addr) {
-      case 0xFF40:
-        regs.LCDC = data;
-        break;
+  void LCD::Write(uint16_t addr, uint8_t data) {
+    uint8_t offset = (addr - 0xFF40);
+    uint8_t *p = (uint8_t *) &regs;
+    p[offset] = data;
 
-      case 0xFF41:
-        regs.LCDS = data;
-        break;
+    if (offset == 6) {
+      auto &bus = Gameboy::Get();
+      bus.m_DMA.Start(data);
+    }
 
-      case 0xFF42:
-        regs.SCRY = data;
-        break;
-
-      case 0xFF43:
-        regs.SCRX = data;
-        break;
-
-      case 0xFF44:
-        regs.LY = data;
-        break;
-
-      case 0xFF45:
-        regs.LYCP = data;
-        break;
-
-      case 0xFF46: {
-        auto &bus = Gameboy::Get();
-        auto &dma = bus.m_DMA;
-        dma.Start(data);
-      }
-        break;
-
-      case 0xFF47:
-        PaletteUpdate(data, 0);
-        break;
-
-      case 0xFF48:
-        PaletteUpdate(data & 0xFC, 1);
-        break;
-
-      case 0xFF49:
-        PaletteUpdate(data & 0xFC, 1);
-        break;
-
-      case 0xFF4A:
-        regs.WINY = data;
-        break;
-
-      case 0xFF4B:
-        regs.WINX = data;
-        break;
-
-      default:
-        break; // Notify on this
+    if (addr == 0xFF47) {
+      PaletteUpdate(data, 0);
+    } else if (addr == 0xFF48) {
+      PaletteUpdate(data & 0b11111100, 1);
+    } else if (addr == 0xFF49) {
+      PaletteUpdate(data & 0b11111100, 2);
     }
   }
 

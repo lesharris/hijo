@@ -3,6 +3,7 @@
 
 #include "system/Gameboy.h"
 #include "cpu/Interrupts.h"
+#include "display/PPU.h"
 
 namespace hijo {
   void UI::OnAttach() {
@@ -174,6 +175,10 @@ namespace hijo {
       Tiles();
     }
 
+    if (m_ShowOAM) {
+      OAM();
+    }
+
     Viewport();
 
     ImGui::End();
@@ -242,6 +247,7 @@ namespace hijo {
 
   void UI::Viewport() {
     static bool firstRun = true;
+    static bool second = true;
 
     ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
     ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_FirstUseEver);
@@ -286,14 +292,15 @@ namespace hijo {
         EventManager::Dispatcher().trigger<Events::UIMouseMove>({position.x, position.y});
       }
 
-      if (firstRun || windowWidth != m_PrevScreenWidth || windowHeight != m_PrevScreenHeight) {
+      if (firstRun || second || windowWidth != m_PrevScreenWidth || windowHeight != m_PrevScreenHeight) {
         m_PreviousWindowSize = size;
         m_PrevScreenWidth = windowWidth;
         m_PrevScreenHeight = windowHeight;
 
         firstRun = false;
+        second = false;
 
-        EventManager::Dispatcher().enqueue<Events::ViewportResized>({size.x, size.y});
+        EventManager::Dispatcher().trigger<Events::ViewportResized>({size.x, size.y});
       } else {
         auto &texture = Hijo::Get().GetRenderTexture();
         ImGui::Image(reinterpret_cast<ImTextureID>((uint64_t) texture.texture.id),
@@ -322,7 +329,7 @@ namespace hijo {
     if (!ImGui::Begin("Disassembly", &m_ShowDisassembly)) {
       ImGui::End();
     } else {
-      if (ImGui::BeginTable("disa", 4, ImGuiTableFlags_ScrollY |
+      if (ImGui::BeginTable("disa", 3, ImGuiTableFlags_ScrollY |
                                        ImGuiTableFlags_BordersOuterH |
                                        ImGuiTableFlags_BordersOuterV |
                                        ImGuiTableFlags_RowBg)) {
@@ -331,7 +338,7 @@ namespace hijo {
         ImGui::TableSetupColumn("Address", ImGuiTableColumnFlags_WidthFixed, 50.0f);
         ImGui::TableSetupColumn("Bytes", ImGuiTableColumnFlags_WidthFixed, 70.0f);
         ImGui::TableSetupColumn("Instruction", ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("Addr. Mode", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+        // ImGui::TableSetupColumn("Addr. Mode", ImGuiTableColumnFlags_WidthFixed, 40.0f);
 
         ImGuiListClipper clipper;
         clipper.Begin(lines.size());
@@ -357,8 +364,8 @@ namespace hijo {
             ImGui::TableSetColumnIndex(2);
             ImGui::TextUnformatted(line.text.c_str());
 
-            ImGui::TableSetColumnIndex(3);
-            ImGui::TextUnformatted(fmt::format("[{}]", line.mode.c_str()).c_str());
+            //ImGui::TableSetColumnIndex(3);
+            //ImGui::TextUnformatted(fmt::format("[{}]", line.mode.c_str()).c_str());
           }
         }
 
@@ -396,10 +403,25 @@ namespace hijo {
     if (!ImGui::Begin("Registers", &m_ShowRegisters)) {
       ImGui::End();
     } else {
-      bool Z = CPU_FLAG_Z;
-      bool N = CPU_FLAG_N;
-      bool H = CPU_FLAG_H;
-      bool C = CPU_FLAG_C;
+      bool Z = cpu.CPU_FLAG_Z();
+      bool N = cpu.CPU_FLAG_N();
+      bool H = cpu.CPU_FLAG_H();
+      bool C = cpu.CPU_FLAG_C();
+
+      uint8_t IF = cpu.IntFlags();
+      uint8_t IE = cpu.IERegister();
+
+      bool IF_VBlank = BIT(IF, 0);
+      bool IF_LCDStat = BIT(IF, 1);
+      bool IF_Timer = BIT(IF, 2);
+      bool IF_Serial = BIT(IF, 3);
+      bool IF_Joypad = BIT(IF, 4);
+
+      bool IE_VBlank = BIT(IE, 0);
+      bool IE_LCDStat = BIT(IE, 1);
+      bool IE_Timer = BIT(IE, 2);
+      bool IE_Serial = BIT(IE, 3);
+      bool IE_Joypad = BIT(IE, 4);
 
       bool MasterInterrupt = cpu.m_InterruptMasterEnabled;
 
@@ -514,12 +536,104 @@ namespace hijo {
       ImGui::Checkbox("C", &C);
       ImGui::EndGroup();
       ImGui::Separator();
-      ImGui::Checkbox("Master Interrupt", &MasterInterrupt);
+      ImGui::Checkbox("Interrupt Master Enable", &MasterInterrupt);
+      ImGui::Separator();
       ImGui::TextUnformatted(fmt::format("IF: {:08b}", cpu.IntFlags()).c_str());
+      ImGui::BeginGroup();
+      ImGui::Checkbox("VBlank", &IF_VBlank);
+      ImGui::SameLine();
+      ImGui::Checkbox("LCD Stat", &IF_LCDStat);
+      ImGui::SameLine();
+      ImGui::Checkbox("Timer", &IF_Timer);
+      ImGui::SameLine();
+      ImGui::Checkbox("Serial", &IF_Serial);
+      ImGui::SameLine();
+      ImGui::Checkbox("Joypad", &IF_Joypad);
+      ImGui::EndGroup();
+      ImGui::Separator();
       ImGui::TextUnformatted(fmt::format("IE: {:08b}", cpu.IERegister()).c_str());
+      ImGui::BeginGroup();
+      ImGui::Checkbox("VBlank", &IE_VBlank);
+      ImGui::SameLine();
+      ImGui::Checkbox("LCD Stat", &IE_LCDStat);
+      ImGui::SameLine();
+      ImGui::Checkbox("Timer", &IE_Timer);
+      ImGui::SameLine();
+      ImGui::Checkbox("Serial", &IE_Serial);
+      ImGui::SameLine();
+      ImGui::Checkbox("Joypad", &IE_Joypad);
+      ImGui::EndGroup();
 
       // Interrupts
 
+      ImGui::End();
+    }
+  }
+
+  void UI::OAM() {
+    Gameboy *gb = app.System<Gameboy>();
+    auto &oam = gb->m_PPU.m_OAMRam;
+    auto &texture = Hijo::Get().GetPackedTileTexture();
+
+    if (!ImGui::Begin("OAM", &m_ShowOAM)) {
+      ImGui::End();
+    } else {
+      ImGui::BeginTable("oam", 8, ImGuiTableFlags_ScrollY |
+                                  ImGuiTableFlags_BordersOuterH |
+                                  ImGuiTableFlags_BordersOuterV |
+                                  ImGuiTableFlags_RowBg);
+      ImGui::TableSetupColumn("#");
+      ImGui::TableSetupColumn("X");
+      ImGui::TableSetupColumn("Y");
+      ImGui::TableSetupColumn("Tile");
+      ImGui::TableSetupColumn("Pal#");
+      ImGui::TableSetupColumn("XFlip");
+      ImGui::TableSetupColumn("YFlip");
+      ImGui::TableSetupColumn("BGP");
+
+      ImGui::TableHeadersRow();
+
+      uint8_t count = 0;
+
+      for (size_t i = 0; i < 40; i++) {
+        const auto &entry = oam[i];
+
+        int colCount = (int) (texture.texture.width / 32.0f);
+        int rowCount = (int) (texture.texture.height / 32.0f);
+        int tx = entry.tile % colCount;
+        int ty = (int) ((float) entry.tile / (float) colCount);
+
+        float x = tx * 32.0f;
+        float y = ty * 32.0f;
+
+        ImVec2 uv0{x / texture.texture.width, y / texture.texture.height};
+        ImVec2 uv1{(x + 32.0f) / texture.texture.width, (y + 32.0f) / texture.texture.height};
+
+        uv0.y = -uv0.y;
+        uv1.y = -uv1.y;
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("%d", count++);
+        ImGui::TableNextColumn();
+        ImGui::Text("%d", entry.x);
+        ImGui::TableNextColumn();
+        ImGui::Text("%d", entry.y);
+        ImGui::TableNextColumn();
+        ImGui::Text("%d", entry.tile);
+        ImGui::Image(reinterpret_cast<ImTextureID>((uint64_t) texture.texture.id),
+                     {32.0f, 32.0f},
+                     uv0, uv1);
+        ImGui::TableNextColumn();
+        ImGui::Text("%d", PPU::OAMEntryPaletteNumber(entry));
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", PPU::OAMEntryXFlip(entry) ? "Y" : "N");
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", PPU::OAMEntryYFlip(entry) ? "Y" : "N");
+        ImGui::TableNextColumn();
+        ImGui::Text("%s", PPU::OAMEntryBackgroundPriority(entry) ? "Y" : "N");
+      }
+
+      ImGui::EndTable();
       ImGui::End();
     }
   }

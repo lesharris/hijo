@@ -120,6 +120,14 @@ namespace hijo::Input {
   Manager::Manager() {
     m_Mapping.Set(
         {
+            {KEY_W,      ActionType::Up},
+            {KEY_A,      ActionType::Left},
+            {KEY_S,      ActionType::Down},
+            {KEY_D,      ActionType::Right},
+            {KEY_COMMA,  ActionType::B},
+            {KEY_PERIOD, ActionType::A},
+            {KEY_ENTER,  ActionType::Start},
+            {KEY_TAB,    ActionType::Select}
         });
   }
 
@@ -137,7 +145,6 @@ namespace hijo::Input {
     }
 
     for (auto key: m_Keys) {
-      // Do we care about Key up events?
       if (IsKeyReleased(key)) {
         ClearModifierState(key);
 
@@ -159,7 +166,7 @@ namespace hijo::Input {
       }
     }
 
-    HandleActions();
+    HandlePressedActions();
   }
 
   void Manager::PollMouse() {
@@ -201,6 +208,10 @@ namespace hijo::Input {
   }
 
   void Manager::HandleActions() {
+
+  }
+
+  void Manager::HandlePressedActions() {
     while (!m_KeyQueue.empty()) {
       auto keyPressed = m_KeyQueue[0];
       m_KeyQueue.pop_back();

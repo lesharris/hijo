@@ -47,8 +47,6 @@ namespace hijo {
       }
       EndTextureMode();
 
-      BeginTextureMode(m_TileTexture);
-      ClearBackground(m_DefaultBackground);
       auto displayTile = [](uint16_t startLocation, uint16_t tileNum, int x, int y) {
         auto &gb = Gameboy::Get();
 
@@ -78,22 +76,47 @@ namespace hijo {
         }
       };
 
-      uint16_t addr = 0x8000;
-      int xDraw = 0;
-      int yDraw = 0;
-      int tileNum = 0;
 
-      for (int y = 0; y < 24; y++) {
-        for (int x = 0; x < 16; x++) {
-          displayTile(addr, tileNum, xDraw + (x * 4), yDraw + (y * 4));
-          xDraw += (8 * 4);
-          tileNum++;
+      BeginTextureMode(m_TileTexture);
+      ClearBackground(m_DefaultBackground);
+      {
+        uint16_t addr = 0x8000;
+        int xDraw = 0;
+        int yDraw = 0;
+        int tileNum = 0;
+
+        for (int y = 0; y < 24; y++) {
+          for (int x = 0; x < 16; x++) {
+            displayTile(addr, tileNum, xDraw + (x * 4), yDraw + (y * 4));
+            xDraw += (8 * 4);
+            tileNum++;
+          }
+
+          yDraw += (8 * 4);
+          xDraw = 0;
         }
-
-        yDraw += (8 * 4);
-        xDraw = 0;
       }
+      EndTextureMode();
 
+      BeginTextureMode(m_PackedTileTexture);
+      ClearBackground(m_DefaultBackground);
+      {
+        uint16_t addr = 0x8000;
+        int xDraw = 0;
+        int yDraw = 0;
+        int tileNum = 0;
+
+        for (int y = 0; y < 24; y++) {
+          for (int x = 0; x < 16; x++) {
+            displayTile(addr, tileNum, xDraw, yDraw);
+            xDraw += (8 * 4);
+            tileNum++;
+          }
+
+          yDraw += (8 * 4);
+          xDraw = 0;
+        }
+      }
       EndTextureMode();
 
       BeginDrawing();
@@ -109,23 +132,6 @@ namespace hijo {
         if (!layer->RenderTarget())
           layer->Render();
       }
-
-      /* addr = 0x8000;
-       xDraw = 0;
-       yDraw = 0;
-       tileNum = 0;
-
-
-       for (int y = 0; y < 24; y++) {
-         for (int x = 0; x < 16; x++) {
-           displayTile(addr, tileNum, xDraw + (x * 4), yDraw + (y * 4));
-           xDraw += (8 * 4);
-           tileNum++;
-         }
-
-         yDraw += (8 * 4);
-         xDraw = 0;
-       }*/
 
       for (const auto &layer: *m_GameLayers) {
         layer->EndFrame();
@@ -168,8 +174,11 @@ namespace hijo {
     m_RenderTexture = LoadRenderTexture(m_ScreenWidth, m_ScreenHeight);
     SetTextureFilter(m_RenderTexture.texture, TEXTURE_FILTER_POINT);
 
-    m_TileTexture = LoadRenderTexture((16 * 8 * 4) + (16 * 4), (32 * 8 * 4) + (64 * 4));
+    m_TileTexture = LoadRenderTexture(36 * 16, 36 * 24);
     SetTextureFilter(m_TileTexture.texture, TEXTURE_FILTER_POINT);
+
+    m_PackedTileTexture = LoadRenderTexture(32 * 16, 32 * 24);
+    SetTextureFilter(m_PackedTileTexture.texture, TEXTURE_FILTER_POINT);
 
     EventManager::Get().Attach<
         Events::ViewportResized,
@@ -194,6 +203,7 @@ namespace hijo {
 
     UnloadRenderTexture(m_RenderTexture);
     UnloadRenderTexture(m_TileTexture);
+    UnloadRenderTexture(m_PackedTileTexture);
     CloseAudioDevice();
     CloseWindow();
   }

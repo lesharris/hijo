@@ -7,10 +7,15 @@
 
 namespace hijo {
   PPU::PPU() {
+    Init();
+  }
+
+  void PPU::Init() {
     auto &lcd = LCD::Get();
 
     currentFrame = 0;
     lineTicks = 0;
+    videoBuffer.clear();
     videoBuffer.reserve(m_YRes * m_XRes);
 
     fifo.lineX = 0;
@@ -29,7 +34,7 @@ namespace hijo {
     lcd.LCDS_SetMode(LCD::Mode::OAM);
 
     memset(m_VideoRam, 0, 1024 * 8);
-    memset(m_OAMRam, 0, 40 * sizeof(OAMEntry));
+    memset(m_OAMRam, 0, sizeof(m_OAMRam));
 
     for (auto n = 0; n < m_YRes * m_XRes; n++) {
       videoBuffer.push_back({0, 0, 0, 0xFF});
@@ -48,31 +53,70 @@ namespace hijo {
       case LCD::Mode::XFER:
         XFERMode();
         break;
-      case LCD::Mode::HBlank:
-        HBlankMode();
-        break;
       case LCD::Mode::VBlank:
         VBlankMode();
+        break;
+      case LCD::Mode::HBlank:
+        HBlankMode();
         break;
     }
   }
 
   void PPU::OAMWrite(uint16_t addr, uint8_t data) {
-    if (addr >= 0xFE00) {
+    if (addr >= 0xFE00)
       addr -= 0xFE00;
-    }
 
-    uint8_t *p = (uint8_t *) m_OAMRam;
-    p[addr] = data;
+    /*spdlog::get("console")->info("A: {:08X} AC: {} | E {} - F {}",
+                                 addr,
+                                 a,
+                                 a / 4,
+                                 a % 4);*/
+
+
+    size_t index = addr / 4;
+    uint8_t field = addr % 4;
+
+    switch (field) {
+      case 0:
+        m_OAMRam[index].y = data;
+        break;
+
+      case 1:
+        m_OAMRam[index].x = data;
+        break;
+
+      case 2:
+        m_OAMRam[index].tile = data;
+        break;
+
+      case 3:
+        m_OAMRam[index].flags = data;
+        break;
+    }
   }
 
   uint8_t PPU::OAMRead(uint16_t addr) {
-    if (addr >= 0xFE00) {
+    if (addr >= 0xFE00)
       addr -= 0xFE00;
+
+    size_t index = addr / 4;
+    uint8_t field = addr % 4;
+
+    switch (field) {
+      case 0:
+        return m_OAMRam[index].y;
+
+      case 1:
+        return m_OAMRam[index].x;
+
+      case 2:
+        return m_OAMRam[index].tile;
+
+      case 3:
+        return m_OAMRam[index].flags;
     }
 
-    uint8_t *p = (uint8_t *) m_OAMRam;
-    return p[addr];
+    return 0;
   }
 
   void PPU::VRAMWrite(uint16_t addr, uint8_t data) {
@@ -109,7 +153,7 @@ namespace hijo {
   }
 
   Color PPU::PixelFifoPop() {
-    if (fifo.pixelFifo.size == 0) {
+    if (fifo.pixelFifo.size <= 0) {
       spdlog::get("console")->warn("Empty Pixel Fifo Popped");
       return BLACK;
     }
@@ -142,19 +186,19 @@ namespace hijo {
 
       bit = 7 - offset;
 
-      if (fetchedEntries[i].f_x_flip)
+      if (OAMEntryXFlip(fetchedEntries[i]))
         bit = offset;
 
       uint8_t high = !!(fifo.fetchEntryData[i * 2] & (1 << bit));
       uint8_t low = !!(fifo.fetchEntryData[(i * 2) + 1] & (1 << bit)) << 1;
 
-      bool bgPriority = fetchedEntries[i].f_bgp;
+      bool bgPriority = OAMEntryBackgroundPriority(fetchedEntries[i]);
 
       if (!(high | low))
         continue;
 
       if (!bgPriority || bgColor == 0) {
-        color = fetchedEntries->f_pn
+        color = OAMEntryPaletteNumber(fetchedEntries[i])
                 ? lcdRegs.sp2Colors[high | low]
                 : lcdRegs.sp1Colors[high | low];
 
@@ -233,7 +277,7 @@ namespace hijo {
     for (auto i = 0; i < fetchedEntryCount; i++) {
       uint8_t ty = ((curY + 16) - fetchedEntries[i].y) * 2;
 
-      if (fetchedEntries[i].f_y_flip)
+      if (OAMEntryYFlip(fetchedEntries[i]))
         ty = ((sprHeight * 2) - 2) - ty;
 
       uint8_t tileIndex = fetchedEntries[i].tile;
