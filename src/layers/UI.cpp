@@ -115,12 +115,28 @@ namespace hijo {
         ImGui::EndMenu();
       }
       if (ImGui::BeginMenu("Tools")) {
-        ImGui::MenuItem("Registers", NULL, &m_ShowRegisters);
-        ImGui::MenuItem("ROM Viewer", NULL, &m_ShowRom);
-        ImGui::MenuItem("Work RAM Viewer", NULL, &m_ShowWorkRam);
-        ImGui::MenuItem("High RAM Viewer", NULL, &m_ShowHighRam);
-        ImGui::MenuItem("VRAM Viewer", NULL, &m_ShowVRAM);
-        ImGui::MenuItem("Disassembly", NULL, &m_ShowDisassembly);
+        if (ImGui::BeginMenu("CPU")) {
+          ImGui::MenuItem("Registers", NULL, &m_ShowRegisters);
+          ImGui::MenuItem("Disassembly", NULL, &m_ShowDisassembly);
+          ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("RAM")) {
+          ImGui::MenuItem("ROM Viewer", NULL, &m_ShowRom);
+          ImGui::MenuItem("Work RAM Viewer", NULL, &m_ShowWorkRam);
+          ImGui::MenuItem("High RAM Viewer", NULL, &m_ShowHighRam);
+          ImGui::MenuItem("VRAM Viewer", NULL, &m_ShowVRAM);
+          ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Graphics")) {
+          ImGui::MenuItem("Tile Viewer", NULL, &m_ShowTiles);
+          ImGui::MenuItem("OAM Viewer", NULL, &m_ShowOAM);
+          ImGui::EndMenu();
+        }
+
+        ImGui::Separator();
+        ImGui::MenuItem("Cartridge Info", NULL, &m_ShowCartridge);
         ImGui::Separator();
         ImGui::MenuItem("ImGui Demo", NULL, &m_ShowDemo);
         ImGui::EndMenu();
@@ -138,7 +154,8 @@ namespace hijo {
       romViewer.HighlightMin = regs.pc;
       romViewer.HighlightMax = regs.pc;
 
-      romViewer.DrawWindow("ROM", &gb->m_Cartridge->Data(), 32 * 1024);
+      if (gb->m_Cartridge)
+        romViewer.DrawWindow("ROM", &gb->m_Cartridge->Data(), 32 * 1024);
     }
 
     if (m_ShowWorkRam) {
@@ -177,6 +194,10 @@ namespace hijo {
 
     if (m_ShowOAM) {
       OAM();
+    }
+
+    if (m_ShowCartridge) {
+      CartridgeInfo();
     }
 
     Viewport();
@@ -590,6 +611,7 @@ namespace hijo {
       ImGui::TableSetupColumn("XFlip");
       ImGui::TableSetupColumn("YFlip");
       ImGui::TableSetupColumn("BGP");
+      ImGui::TableSetupScrollFreeze(8, 1);
 
       ImGui::TableHeadersRow();
 
@@ -599,7 +621,6 @@ namespace hijo {
         const auto &entry = oam[i];
 
         int colCount = (int) (texture.texture.width / 32.0f);
-        int rowCount = (int) (texture.texture.height / 32.0f);
         int tx = entry.tile % colCount;
         int ty = (int) ((float) entry.tile / (float) colCount);
 
@@ -611,6 +632,7 @@ namespace hijo {
 
         uv0.y = -uv0.y;
         uv1.y = -uv1.y;
+
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
         ImGui::Text("%d", count++);
@@ -634,6 +656,164 @@ namespace hijo {
       }
 
       ImGui::EndTable();
+      ImGui::End();
+    }
+  }
+
+  void UI::CartridgeInfo() {
+    auto &bus = Gameboy::Get();
+    auto cartridge = bus.m_Cartridge;
+
+    if (!ImGui::Begin("Cartridge", &m_ShowCartridge)) {
+      ImGui::End();
+    } else {
+      if (!cartridge) {
+        ImGui::Text("No cartridge loaded!");
+      } else {
+        const auto &header = cartridge->Header();
+        const auto &statLines = cartridge->m_Mapper->GetStats();
+
+        ImGui::BeginTable("cinfo", 2, ImGuiTableFlags_RowBg);
+        ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+        ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Name");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%s", header.title.c_str());
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Licensee");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%s", header.licensee.c_str());
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Mapper");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%s", header.mapperInfo.label.c_str());
+
+        ImGui::EndTable();
+
+        ImGui::Separator();
+
+        bool hasRam = header.mapperInfo.hasRam;
+        bool hasTimer = header.mapperInfo.hasTimer;
+        bool hasBattery = header.mapperInfo.hasBattery;
+        bool hasRumble = header.mapperInfo.hasRumble;
+
+        ImGui::Text("Cartridge Features:");
+        ImGui::Checkbox("Ram", &hasRam);
+        ImGui::SameLine();
+        ImGui::Checkbox("Battery", &hasBattery);
+        ImGui::SameLine();
+        ImGui::Checkbox("Timer", &hasTimer);
+        ImGui::SameLine();
+        ImGui::Checkbox("Rumble", &hasRumble);
+
+        ImGui::Separator();
+
+        ImGui::BeginTable("cinfo2", 2, ImGuiTableFlags_RowBg);
+        ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+        ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+
+        std::string cgbFlag = "";
+
+        switch (header.CGBFlag) {
+          case 0x80:
+            cgbFlag = "Enhanced";
+            break;
+
+          case 0xC0:
+            cgbFlag = "Required";
+            break;
+
+          default:
+            cgbFlag = "None";
+            break;
+        }
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("GB Color Support");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%s", cgbFlag.c_str());
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Super Gameboy");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%s", header.sgbFlag == 0x3 ? "Supported" : "Not Supported");
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Region Code");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%s", header.destinationCode == 0 ? "Japan/World" : "World");
+
+        ImGui::EndTable();
+
+        ImGui::Separator();
+
+        ImGui::BeginTable("cinfo3", 2, ImGuiTableFlags_RowBg);
+        ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+        ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Rom Size");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%s [%d banks]", header.romInfo.label.c_str(), header.romInfo.romBankCount);
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Ram Size");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%s [%d banks]", header.ramInfo.ramBankCount > 0
+                                     ? header.ramInfo.label.c_str()
+                                     : "None",
+                    header.ramInfo.ramBankCount);
+
+        ImGui::EndTable();
+
+        ImGui::Separator();
+
+        ImGui::BeginTable("cinfo4", 2, ImGuiTableFlags_RowBg);
+        ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+        ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Rom Version");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("0x%02X", header.maskRomVersion);
+
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("Header Checksum");
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("0x%02X [%s]", header.headerChecksum, header.headerChecksumPassed ? "Passed" : "Failed");
+
+        ImGui::EndTable();
+
+        ImGui::Separator();
+
+        ImGui::BeginTable("cinfo5", 2, ImGuiTableFlags_RowBg);
+        ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+        ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+
+        for (const auto &line: statLines) {
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("%s", line.label.c_str());
+          ImGui::TableSetColumnIndex(1);
+          ImGui::Text("%s", line.data.c_str());
+        }
+
+        ImGui::EndTable();
+      }
       ImGui::End();
     }
   }

@@ -75,7 +75,6 @@ add_executable(${PROJECT_NAME}
     src/cartridge/Cartridge.cpp
     src/cartridge/Cartridge.h
     src/common/common.cpp
-    src/cpu/Instructions.cpp
     src/cpu/Instructions.h
     src/cpu/SharpSM83.cpp
     src/cpu/SharpSM83.h
@@ -90,7 +89,7 @@ add_executable(${PROJECT_NAME}
     src/cpu/DMA.cpp
     src/cpu/DMA.h
     src/cpu/Stack.cpp
-    src/cpu/Stack.h src/input/Controller.cpp src/input/Controller.h)
+    src/cpu/Stack.h src/input/Controller.cpp src/input/Controller.h src/sound/APU.cpp src/sound/APU.h src/cartridge/mappers/Mapper.h src/cartridge/mappers/ROM.cpp src/cartridge/mappers/ROM.h src/cartridge/mappers/MBC1.cpp src/cartridge/mappers/MBC1.h)
 
 # Compile Options
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)

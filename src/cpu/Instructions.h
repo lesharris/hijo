@@ -122,9 +122,9 @@ namespace hijo {
       uint8_t param = 0;
     };
 
-    Opcode &OpcodeByByte(uint8_t opcode);
-
-    std::string InstructionToString(const Opcode &t);
+    Opcode &OpcodeByByte(uint8_t opcode) {
+      return m_Instructions[opcode];
+    }
 
     const std::string &AddressModeLabel(const AddressMode &am) {
       return m_AddressModeNames[am];

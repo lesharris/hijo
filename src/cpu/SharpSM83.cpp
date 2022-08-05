@@ -250,14 +250,14 @@ namespace hijo {
 
       case AddressMode::R_HLI:
         m_FetchedData = bus.cpuRead(Reg(m_CurrentInstruction->reg2));
-        bus.Cycles(1);
         Reg(Register::HL, Reg(Register::HL) + 1);
+        bus.Cycles(1);
         return;
 
       case AddressMode::R_HLD:
         m_FetchedData = bus.cpuRead(Reg(m_CurrentInstruction->reg2));
-        bus.Cycles(1);
         Reg(Register::HL, Reg(Register::HL) - 1);
+        bus.Cycles(1);
         return;
 
       case AddressMode::HLI_R:
@@ -276,27 +276,27 @@ namespace hijo {
 
       case AddressMode::R_A8:
         m_FetchedData = bus.cpuRead(regs.pc);
-        bus.Cycles(1);
         regs.pc++;
+        bus.Cycles(1);
         return;
 
       case AddressMode::A8_R:
         m_MemoryDestination = bus.cpuRead(regs.pc) | 0xFF00;
         DestinationIsMemory = true;
-        bus.Cycles(1);
         regs.pc++;
+        bus.Cycles(1);
         return;
 
       case AddressMode::HL_SPR:
         m_FetchedData = bus.cpuRead(regs.pc);
-        bus.Cycles(1);
         regs.pc++;
+        bus.Cycles(1);
         return;
 
       case AddressMode::D8:
         m_FetchedData = bus.cpuRead(regs.pc);
-        bus.Cycles(1);
         regs.pc++;
+        bus.Cycles(1);
         return;
 
       case AddressMode::A16_R:
@@ -318,10 +318,10 @@ namespace hijo {
 
       case AddressMode::MR_D8:
         m_FetchedData = bus.cpuRead(regs.pc);
-        bus.Cycles(1);
-        regs.pc++;
         m_MemoryDestination = Reg(m_CurrentInstruction->reg1);
         DestinationIsMemory = true;
+        bus.Cycles(1);
+        regs.pc++;
         return;
 
       case AddressMode::MR:
@@ -358,6 +358,7 @@ namespace hijo {
 
     m_CurrentOpcode = bus.cpuRead(regs.pc++);
     m_CurrentInstruction = &instrs.OpcodeByByte(m_CurrentOpcode);
+    bus.Cycles(1);
   }
 
   void SharpSM83::Execute() {
@@ -376,7 +377,6 @@ namespace hijo {
 
     if (!m_Halted) {
       FetchInstruction();
-      bus.Cycles(1);
       FetchData();
 
       if (m_CurrentInstruction == nullptr) {
@@ -464,9 +464,9 @@ namespace hijo {
         Stack::Push16(regs.pc);
       }
 
-      /*if (addr >= 0xC000 && addr < 0xFE00) {
-        Disassemble(0, 0xFFFF);
-      }*/
+      /* if (addr >= 0xC000 && addr < 0xFE00) {
+         Disassemble(0, 0xFFFF);
+       }*/
 
       regs.pc = addr;
       bus.Cycles(1);
@@ -803,15 +803,18 @@ namespace hijo {
 
     uint16_t n = (hi << 8) | lo;
 
-    Reg(m_CurrentInstruction->reg1, n);
-
     if (m_CurrentInstruction->reg1 == Register::AF) {
       Reg(m_CurrentInstruction->reg1, n & 0xFFF0);
+    } else {
+      Reg(m_CurrentInstruction->reg1, n);
     }
   }
 
   void SharpSM83::ProcPUSH() {
     auto &bus = Gameboy::Get();
+
+    // Internal
+    bus.Cycles(1);
 
     uint16_t hi = (Reg(m_CurrentInstruction->reg1) >> 8) & 0xFF;
     bus.Cycles(1);
@@ -820,8 +823,6 @@ namespace hijo {
     uint16_t lo = Reg(m_CurrentInstruction->reg1) & 0xFF;
     bus.Cycles(1);
     Stack::Push(lo);
-
-    bus.Cycles(1);
   }
 
   void SharpSM83::ProcINC() {
@@ -834,9 +835,11 @@ namespace hijo {
     }
 
     if (m_CurrentInstruction->reg1 == Register::HL && m_CurrentInstruction->mode == AddressMode::MR) {
-      val = bus.cpuRead(Reg(Register::HL)) + 1;
+      val = m_FetchedData;
+      val++;
       val &= 0xFF;
       bus.cpuWrite(Reg(Register::HL), val);
+      bus.Cycles(1);
     } else {
       Reg(m_CurrentInstruction->reg1, val);
       val = Reg(m_CurrentInstruction->reg1);
@@ -859,8 +862,11 @@ namespace hijo {
     }
 
     if (m_CurrentInstruction->reg1 == Register::HL && m_CurrentInstruction->mode == AddressMode::MR) {
-      val = bus.cpuRead(Reg(Register::HL)) - 1;
+      val = m_FetchedData;
+      val--;
+      val &= 0xFF;
       bus.cpuWrite(Reg(Register::HL), val);
+      bus.Cycles(1);
     } else {
       Reg(m_CurrentInstruction->reg1, val);
       val = Reg(m_CurrentInstruction->reg1);

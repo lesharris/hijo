@@ -44,6 +44,8 @@ namespace hijo {
 
     void OAM();
 
+    void CartridgeInfo();
+
   private:
     ImVec2 GetLargestSizeForViewport();
 
@@ -65,6 +67,7 @@ namespace hijo {
     bool m_ShowDisassembly = true;
     bool m_ShowRegisters = true;
     bool m_ShowOAM = true;
+    bool m_ShowCartridge = true;
 
     ImVec2 m_PreviousWindowSize{0, 0};
     ImVec2 m_PreviousMousePosition{0, 0};

@@ -33,7 +33,7 @@ namespace hijo {
 
     void cpuWrite16(uint16_t addr, uint16_t value);
 
-    uint8_t cpuRead(uint16_t addr, bool readOnly = false) override;
+    uint8_t cpuRead(uint16_t addr) override;
 
     uint16_t cpuRead16(uint16_t addr);
 
@@ -102,6 +102,8 @@ namespace hijo {
     bool m_TargetActive = false;
 
     std::string m_Buffer;
+
+    uint16_t m_CyclesTaken = 0;
   };
 
 } // hijo

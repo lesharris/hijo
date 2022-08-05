@@ -11,27 +11,10 @@ namespace hijo {
 
     app.System(this);
 
-    //m_Cpu.ConnectBus(this);
-
     memset(m_ExtRam, 0, 1024 * 8);
     memset(m_WorkRam, 0, 1024 * 8);
     memset(m_HighRam, 0, 127);
     memset(m_Serial, 0, 2);
-
-    /* m_Ram[0] = 0x04; // INC B
-     m_Ram[1] = 0x0E; // LD C, #$20
-     m_Ram[2] = 0x20;
-     m_Ram[3] = 0xCD; // CALL $C00;
-     m_Ram[4] = 0x00;
-     m_Ram[5] = 0x0C;
-     m_Ram[6] = 0xC3; // JP $0000
-
-     m_Ram[0xC00] = 0x14; // INC D
-     m_Ram[0xC01] = 0xC9; // RET
-
-     // m_Ram[3] = 0x18; // JR $0000 < -3 >
-     // m_Ram[4] = 0xFD;
-     //m_Ram[3] = 0xC3; // JP $0000;*/
 
     m_Timer.div = 0xABCC;
 
@@ -57,14 +40,12 @@ namespace hijo {
 
   void Gameboy::cpuWrite(uint16_t addr, uint8_t data) {
     if (addr < 0x8000) {
-      //ROM Data
-      //cart_write(address, value);
+      m_Cartridge->Write(addr, data);
     } else if (addr < 0xA000) {
       //Char/Map Data
       m_PPU.VRAMWrite(addr, data);
     } else if (addr < 0xC000) {
-      //EXT-RAM
-      m_ExtRam[addr & 0x1FFF] = data;
+      m_Cartridge->Write(addr, data);
     } else if (addr < 0xE000) {
       //WRAM
       m_WorkRam[addr & 0x1FFF] = data;
@@ -160,16 +141,16 @@ namespace hijo {
     }
   }
 
-  uint8_t Gameboy::cpuRead(uint16_t addr, bool) {
+  uint8_t Gameboy::cpuRead(uint16_t addr) {
     if (addr < 0x8000) {
       //ROM Data
-      return m_Cartridge->Data()[addr];
+      return m_Cartridge->Read(addr);
     } else if (addr < 0xA000) {
       //Char/Map Data
       return m_PPU.VRAMRead(addr);
     } else if (addr < 0xC000) {
       //Cartridge RAM
-      return m_ExtRam[addr & 0x1FFF];
+      return m_Cartridge->Read(addr);
     } else if (addr < 0xE000) {
       //WRAM (Working RAM)
       return m_WorkRam[addr & 0x1FFF];
@@ -258,8 +239,10 @@ namespace hijo {
     // 70224 tcycles per frame
     // 17556 mcycles per frame
 
+    m_CyclesTaken = 0;
+
     if (m_Run) {
-      for (auto c = 0; c < 17556; c++) {
+      do {
         if (m_TargetActive && m_Cpu.regs.pc == m_TargetAddr) {
           m_TargetActive = false;
           m_Run = false;
@@ -267,7 +250,7 @@ namespace hijo {
         }
 
         m_Cpu.Step();
-      }
+      } while (m_CyclesTaken <= 17556);
     }
   }
 
@@ -290,6 +273,8 @@ namespace hijo {
   }
 
   void Gameboy::Cycles(uint32_t cycles) {
+    m_CyclesTaken += cycles;
+
     for (uint32_t i = 0; i < cycles; i++) {
       for (auto n = 0; n < 4; n++) {
         m_CycleCount++;
