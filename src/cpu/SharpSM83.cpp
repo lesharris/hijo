@@ -375,8 +375,6 @@ namespace hijo {
   bool SharpSM83::Step() {
     m_CurrentCycles = 0;
 
-    auto &bus = Gameboy::Get();
-
     if (!m_Halted) {
       FetchInstruction();
       m_CurrentCycles++;
@@ -411,19 +409,19 @@ namespace hijo {
 
   void SharpSM83::SetFlags(int8_t z, int8_t n, int8_t h, int8_t c) {
     if (z != -1) {
-      BIT_SET(regs.f, 7, z);
+      SetBit(regs.f, 7, z);
     }
 
     if (n != -1) {
-      BIT_SET(regs.f, 6, n);
+      SetBit(regs.f, 6, n);
     }
 
     if (h != -1) {
-      BIT_SET(regs.f, 5, h);
+      SetBit(regs.f, 5, h);
     }
 
     if (c != -1) {
-      BIT_SET(regs.f, 4, c);
+      SetBit(regs.f, 4, c);
     }
   }
 
@@ -460,8 +458,6 @@ namespace hijo {
   }
 
   void SharpSM83::GotoAddress(uint16_t addr, bool pushPC) {
-    auto &bus = Gameboy::Get();
-
     if (CheckCondition()) {
       if (pushPC) {
         Cycle(2);
@@ -486,8 +482,6 @@ namespace hijo {
   }
 
   void SharpSM83::ProcCB() {
-    auto &bus = Gameboy::Get();
-
     uint8_t op = m_FetchedData;
     Register reg = DecodeRegister(op & 0b111);
     uint8_t bit = (op >> 3) & 0b111;
@@ -774,7 +768,6 @@ namespace hijo {
   }
 
   void SharpSM83::ProcRET() {
-    auto &bus = Gameboy::Get();
     if (m_CurrentInstruction->cond != Condition::NONE) {
       Cycle(1);
     }
@@ -798,8 +791,6 @@ namespace hijo {
   }
 
   void SharpSM83::ProcPOP() {
-    auto &bus = Gameboy::Get();
-
     uint16_t lo = Stack::Pop();
     Cycle(1);
     uint16_t hi = Stack::Pop();
@@ -815,8 +806,6 @@ namespace hijo {
   }
 
   void SharpSM83::ProcPUSH() {
-    auto &bus = Gameboy::Get();
-
     // Internal
     Cycle(1);
 

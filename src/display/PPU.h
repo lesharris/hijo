@@ -55,23 +55,23 @@ namespace hijo {
     };
 
     static bool OAMEntryCGBVramBank(const OAMEntry &entry) {
-      return BIT(entry.flags, 3);
+      return Bit(entry.flags, 3);
     }
 
     static bool OAMEntryPaletteNumber(const OAMEntry &entry) {
-      return BIT(entry.flags, 4);
+      return Bit(entry.flags, 4);
     }
 
     static bool OAMEntryXFlip(const OAMEntry &entry) {
-      return BIT(entry.flags, 5);
+      return Bit(entry.flags, 5);
     }
 
     static bool OAMEntryYFlip(const OAMEntry &entry) {
-      return BIT(entry.flags, 6);
+      return Bit(entry.flags, 6);
     }
 
     static bool OAMEntryBackgroundPriority(const OAMEntry &entry) {
-      return BIT(entry.flags, 7);
+      return Bit(entry.flags, 7);
     }
 
     /*

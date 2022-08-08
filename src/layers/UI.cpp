@@ -178,8 +178,6 @@ namespace hijo {
     }
 
     Gameboy *gb = app.System<Gameboy>();
-    auto &cpu = gb->m_Cpu;
-    auto &regs = cpu.regs;
 
     // Display Windows
     {
@@ -476,17 +474,17 @@ namespace hijo {
       uint8_t IF = cpu.IntFlags();
       uint8_t IE = cpu.IERegister();
 
-      bool IF_VBlank = BIT(IF, 0);
-      bool IF_LCDStat = BIT(IF, 1);
-      bool IF_Timer = BIT(IF, 2);
-      bool IF_Serial = BIT(IF, 3);
-      bool IF_Joypad = BIT(IF, 4);
+      bool IF_VBlank = Bit(IF, 0);
+      bool IF_LCDStat = Bit(IF, 1);
+      bool IF_Timer = Bit(IF, 2);
+      bool IF_Serial = Bit(IF, 3);
+      bool IF_Joypad = Bit(IF, 4);
 
-      bool IE_VBlank = BIT(IE, 0);
-      bool IE_LCDStat = BIT(IE, 1);
-      bool IE_Timer = BIT(IE, 2);
-      bool IE_Serial = BIT(IE, 3);
-      bool IE_Joypad = BIT(IE, 4);
+      bool IE_VBlank = Bit(IE, 0);
+      bool IE_LCDStat = Bit(IE, 1);
+      bool IE_Timer = Bit(IE, 2);
+      bool IE_Serial = Bit(IE, 3);
+      bool IE_Joypad = Bit(IE, 4);
 
       bool MasterInterrupt = cpu.m_InterruptMasterEnabled;
 
@@ -898,21 +896,6 @@ namespace hijo {
       }
     };
 
-    auto stateToString = [](class PPU &ppu) {
-      switch (ppu.fifo.state) {
-        case PPU::FetchState::Tile:
-          return "Tile";
-        case PPU::FetchState::Data0:
-          return "Data0";
-        case PPU::FetchState::Data1:
-          return "Data1";
-        case PPU::FetchState::Idle:
-          return "Idle";
-        case PPU::FetchState::Push:
-          return "Push";
-      }
-    };
-
     if (!ImGui::Begin("PPU", &m_ShowPPU)) {
       ImGui::End();
     } else {
@@ -922,14 +905,14 @@ namespace hijo {
                                              (lcd.regs.LCDC & 0xF0) >> 4,
                                              lcd.regs.LCDC & 0xF).c_str());
 
-          bool LCDC_Enable = BIT(lcd.regs.LCDC, 7);
-          bool LCDC_WinMapArea = BIT(lcd.regs.LCDC, 6);
-          bool LCDC_WindowEnable = BIT(lcd.regs.LCDC, 5);
-          bool LCDC_TileDataArea = BIT(lcd.regs.LCDC, 4);
-          bool LCDC_BGMapArea = BIT(lcd.regs.LCDC, 3);
-          bool LCDC_ObjSize = BIT(lcd.regs.LCDC, 2);
-          bool LCDC_ObjEnable = BIT(lcd.regs.LCDC, 1);
-          bool LCDC_BGWinEnable = BIT(lcd.regs.LCDC, 0);
+          bool LCDC_Enable = Bit(lcd.regs.LCDC, 7);
+          bool LCDC_WinMapArea = Bit(lcd.regs.LCDC, 6);
+          bool LCDC_WindowEnable = Bit(lcd.regs.LCDC, 5);
+          bool LCDC_TileDataArea = Bit(lcd.regs.LCDC, 4);
+          bool LCDC_BGMapArea = Bit(lcd.regs.LCDC, 3);
+          bool LCDC_ObjSize = Bit(lcd.regs.LCDC, 2);
+          bool LCDC_ObjEnable = Bit(lcd.regs.LCDC, 1);
+          bool LCDC_BGWinEnable = Bit(lcd.regs.LCDC, 0);
 
           auto tooltip = [](const char *tip) {
             if (ImGui::IsItemHovered()) {
@@ -999,11 +982,11 @@ namespace hijo {
                                              (lcd.regs.LCDS & 0xF0) >> 4,
                                              lcd.regs.LCDS & 0xF).c_str());
 
-          bool LCDS_IS_LYCLY = BIT(lcd.regs.LCDS, 6);
-          bool LCDS_IS_Mode2_OAM = BIT(lcd.regs.LCDS, 5);
-          bool LCDS_IS_Mode1_VBlank = BIT(lcd.regs.LCDS, 4);
-          bool LCDS_IS_Mode0_HBlank = BIT(lcd.regs.LCDS, 3);
-          bool LCDS_LYCisLY = BIT(lcd.regs.LCDS, 2);
+          bool LCDS_IS_LYCLY = Bit(lcd.regs.LCDS, 6);
+          bool LCDS_IS_Mode2_OAM = Bit(lcd.regs.LCDS, 5);
+          bool LCDS_IS_Mode1_VBlank = Bit(lcd.regs.LCDS, 4);
+          bool LCDS_IS_Mode0_HBlank = Bit(lcd.regs.LCDS, 3);
+          bool LCDS_LYCisLY = Bit(lcd.regs.LCDS, 2);
 
           ImGui::BeginGroup();
           ImGui::Checkbox("LYC", &LCDS_IS_LYCLY);
@@ -1018,7 +1001,7 @@ namespace hijo {
           ImGui::Checkbox("M0HB", &LCDS_IS_Mode0_HBlank);
           tooltip("Mode 0 HBlank Stat Interrupt Source");
           ImGui::SameLine();
-          ImGui::Checkbox("LY=LYC", &LCDS_IS_Mode0_HBlank);
+          ImGui::Checkbox("LY=LYC", &LCDS_LYCisLY);
           tooltip("LY Equals LYC");
           ImGui::EndGroup();
 

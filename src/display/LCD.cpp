@@ -9,35 +9,35 @@ namespace hijo {
   }
 
   bool LCD::LCDC_BGWEnabled() {
-    return BIT(regs.LCDC, 0);
+    return Bit(regs.LCDC, 0);
   }
 
   bool LCD::LCDC_OBJEnabled() {
-    return BIT(regs.LCDC, 1);
+    return Bit(regs.LCDC, 1);
   }
 
   uint8_t LCD::LCDC_ObjHeight() {
-    return BIT(regs.LCDC, 2) ? 16 : 8;
+    return Bit(regs.LCDC, 2) ? 16 : 8;
   }
 
   uint16_t LCD::LCDC_BGTilemapArea() {
-    return BIT(regs.LCDC, 3) ? 0x9C00 : 0x9800;
+    return Bit(regs.LCDC, 3) ? 0x9C00 : 0x9800;
   }
 
   uint16_t LCD::LCDC_BGWTileDataArea() {
-    return BIT(regs.LCDC, 4) ? 0x8000 : 0x8800;
+    return Bit(regs.LCDC, 4) ? 0x8000 : 0x8800;
   }
 
   bool LCD::LCDC_WinEnable() {
-    return BIT(regs.LCDC, 5);
+    return Bit(regs.LCDC, 5);
   }
 
   uint16_t LCD::LCDC_WindowTilemapArea() {
-    return BIT(regs.LCDC, 6) ? 0x9C00 : 0x9800;
+    return Bit(regs.LCDC, 6) ? 0x9C00 : 0x9800;
   }
 
   bool LCD::LCDC_Enabled() {
-    return BIT(regs.LCDC, 7);
+    return Bit(regs.LCDC, 7);
   }
 
   LCD::Mode LCD::LCDS_Mode() {
@@ -50,11 +50,11 @@ namespace hijo {
   }
 
   bool LCD::LCDS_LYC() {
-    return BIT(regs.LCDS, 2);
+    return Bit(regs.LCDS, 2);
   }
 
   void LCD::LCDS_LYCSet(bool isSet) {
-    BIT_SET(regs.LCDS, 2, isSet);
+    SetBit(regs.LCDS, 2, isSet);
   }
 
   uint8_t LCD::LCDS_StatInt(StatSrc src) {

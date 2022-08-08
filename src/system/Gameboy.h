@@ -62,6 +62,7 @@ namespace hijo {
 
     void Reset(bool clearCartridge = true);
 
+    /* Events */
   private:
     void HandleCPUExecution(const Events::ExecuteCPU &event);
 
@@ -98,13 +99,16 @@ namespace hijo {
     uint32_t m_TCycleCount = 0;
     uint32_t m_MCycleCount = 0;
 
-    uint8_t m_ExtRam[1024 * 8];
+    // RAM
     uint8_t m_WorkRam[1024 * 8];
     uint8_t m_HighRam[127];
+
+    // Serial
     uint8_t m_Serial[2];
-
     bool m_SerialTransfer = false;
+    std::string m_Buffer;
 
+    // Things on the bus
     SharpSM83 m_Cpu;
     Timer m_Timer;
     PPU m_PPU;
@@ -112,16 +116,11 @@ namespace hijo {
     std::shared_ptr<Cartridge> m_Cartridge;
     Controller m_Controller;
 
+    // Manual Stepping State
     uint16_t m_TargetAddr = 0;
     bool m_TargetActive = false;
 
-    std::string m_Buffer;
-
-    static constexpr unsigned SAMPLERATE = 48000;
-    static constexpr double CYCLES_PER_SAMPLE = 4194304.0 / SAMPLERATE; // 87.38133333
-    static constexpr double CYCLES_PER_FRAME = 4194304.0 / 59.7;  // 70256.34840871
-    static constexpr size_t SamplesPerFrame = (CYCLES_PER_FRAME / CYCLES_PER_SAMPLE) + 1; // 805
-
+    // APU
     Sound_Queue m_SoundQueue;
     Gb_Apu m_APU{};
     Stereo_Buffer m_StereoBuffer{};

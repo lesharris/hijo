@@ -179,19 +179,19 @@ namespace hijo {
     void ProcADD();
 
     uint8_t CPU_FLAG_Z() {
-      return BIT(regs.f, 7);
+      return Bit(regs.f, 7);
     }
 
     uint8_t CPU_FLAG_N() {
-      return BIT(regs.f, 6);
+      return Bit(regs.f, 6);
     }
 
     uint8_t CPU_FLAG_H() {
-      return BIT(regs.f, 5);
+      return Bit(regs.f, 5);
     }
 
     uint8_t CPU_FLAG_C() {
-      return BIT(regs.f, 4);
+      return Bit(regs.f, 4);
     }
 
   private:

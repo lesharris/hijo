@@ -44,7 +44,6 @@ namespace hijo {
     EventManager::Get().DetachAll(this);
   }
 
-
   void Gameboy::cpuWrite(uint16_t addr, uint8_t data) {
     if (addr < 0x8000) {
       m_Cartridge->Write(addr, data);
@@ -57,16 +56,18 @@ namespace hijo {
       //WRAM
       m_WorkRam[addr & 0x1FFF] = data;
     } else if (addr < 0xFE00) {
+      // Mirror of WRAM
       m_WorkRam[addr & 0x1FFF] = data;
     } else if (addr >= 0xFE00 && addr < 0xFEA0) {
       //OAM
+
       if (m_DMA.Transferring()) {
         return;
       }
 
       m_PPU.OAMWrite(addr, data);
     } else if (addr < 0xFF00) {
-      //unusable reserved
+      // Unusable
     } else if (addr < 0xFF80) {
       //IO Registers...
       if (addr == 0xFF00) {
@@ -83,17 +84,17 @@ namespace hijo {
 
       if (addr == 0xFF02) {
         m_Serial[1] = data;
-        if (!m_SerialTransfer && BIT(m_Serial[1], 7)) {
+        if (!m_SerialTransfer && Bit(m_Serial[1], 7)) {
           m_SerialTransfer = true;
           m_Buffer.clear();
-        } else if (m_SerialTransfer && !(BIT(m_Serial[1], 7))) {
+        } else if (m_SerialTransfer && !(Bit(m_Serial[1], 7))) {
           spdlog::get("console")->info("\n{}", m_Buffer);
           m_SerialTransfer = false;
         }
         return;
       }
 
-      if (BETWEEN(addr, 0xFF04, 0xFF07)) {
+      if (IsBetween(addr, 0xFF04, 0xFF07)) {
         m_Timer.Write(addr, data);
         return;
       }
@@ -103,12 +104,12 @@ namespace hijo {
         return;
       }
 
-      if (BETWEEN(addr, 0xFF10, 0xFF3F)) {
+      if (IsBetween(addr, 0xFF10, 0xFF3F)) {
         m_APU.write_register(m_TCycleCount, addr, data);
         return;
       }
 
-      if (BETWEEN(addr, 0xFF40, 0xFF4B)) {
+      if (IsBetween(addr, 0xFF40, 0xFF4B)) {
         LCD::Get().Write(addr, data);
         return;
       }
@@ -123,24 +124,22 @@ namespace hijo {
         return;
       }
 
-      if (BETWEEN(addr, 0xFF51, 0xFF55)) {
+      if (IsBetween(addr, 0xFF51, 0xFF55)) {
         // CGB Vram DATA
         return;
       }
 
-      if (BETWEEN(addr, 0xFF68, 0xFF69)) {
+      if (IsBetween(addr, 0xFF68, 0xFF69)) {
         // CGB BG/Obj Pals
         return;
       }
 
-      if (BETWEEN(addr, 0xFF70, 0xFF7F)) {
+      if (IsBetween(addr, 0xFF70, 0xFF7F)) {
         // CGB WRAM Bank Select
         return;
       }
 
     } else if (addr == 0xFFFF) {
-      //CPU SET ENABLE REGISTER
-
       m_Cpu.IERegister(data);
     } else {
       m_HighRam[addr & 0x7F] = data;
@@ -186,7 +185,7 @@ namespace hijo {
         return m_Serial[1];
       }
 
-      if (BETWEEN(addr, 0xFF04, 0xFF07)) {
+      if (IsBetween(addr, 0xFF04, 0xFF07)) {
         return m_Timer.Read(addr);
       }
 
@@ -194,11 +193,11 @@ namespace hijo {
         return m_Cpu.IntFlags();
       }
 
-      if (BETWEEN(addr, 0xFF10, 0xFF3F)) {
+      if (IsBetween(addr, 0xFF10, 0xFF3F)) {
         return m_APU.read_register(m_TCycleCount, addr);
       }
 
-      if (BETWEEN(addr, 0xFF40, 0xFF4B)) {
+      if (IsBetween(addr, 0xFF40, 0xFF4B)) {
         return LCD::Get().Read(addr);
       }
 
@@ -212,17 +211,17 @@ namespace hijo {
         return 0;
       }
 
-      if (BETWEEN(addr, 0xFF51, 0xFF55)) {
+      if (IsBetween(addr, 0xFF51, 0xFF55)) {
         // CGB Vram DATA
         return 0;
       }
 
-      if (BETWEEN(addr, 0xFF68, 0xFF69)) {
+      if (IsBetween(addr, 0xFF68, 0xFF69)) {
         // CGB BG/Obj Pals
         return 0;
       }
 
-      if (BETWEEN(addr, 0xFF70, 0xFF7F)) {
+      if (IsBetween(addr, 0xFF70, 0xFF7F)) {
         // CGB WRAM Bank Select
         return 0;
       }
@@ -283,14 +282,24 @@ namespace hijo {
     m_Cpu.Step();
   }
 
-  void Gameboy::InsertCartridge(const std::string &path) {
-    m_Cartridge = Cartridge::Load(path);
+  void Gameboy::HandleLoadRom(const Events::LoadROM &event) {
+    Reset();
+    InsertCartridge(event.path);
+    m_Run = true;
+  }
+
+  void Gameboy::HandleReset(const Events::Reset &) {
+    Reset(false);
   }
 
   void Gameboy::HandleExecuteUntil(const Events::ExecuteUntil &event) {
     m_TargetAddr = event.addr;
     m_Run = true;
     m_TargetActive = true;
+  }
+
+  void Gameboy::InsertCartridge(const std::string &path) {
+    m_Cartridge = Cartridge::Load(path);
   }
 
   void Gameboy::Cycles(uint32_t cycles) {
@@ -319,11 +328,6 @@ namespace hijo {
     return low | (high << 8);
   }
 
-  void Gameboy::HandleLoadRom(const Events::LoadROM &event) {
-    Reset();
-    InsertCartridge(event.path);
-  }
-
   void Gameboy::Reset(bool clearCartridge) {
     m_Run = false;
 
@@ -341,30 +345,24 @@ namespace hijo {
     if (clearCartridge)
       m_Cartridge = nullptr;
 
-    memset(m_ExtRam, 0, 1024 * 8);
     memset(m_WorkRam, 0, 1024 * 8);
     memset(m_HighRam, 0, 127);
     memset(m_Serial, 0, 2);
+    memset(m_SampleBuffer, 0, sizeof(m_SampleBuffer));
+    memset(m_SampleBuffer, 0, sizeof(m_AudioBuffer));
 
     m_Timer.div = 0xABCC;
 
-    memset(m_SampleBuffer, 0, sizeof(m_SampleBuffer));
-
     m_StereoBuffer.clear();
-    // m_APU.reduce_clicks(true);
     m_StereoBuffer.clock_rate(4194304);
-    m_StereoBuffer.set_sample_rate(SAMPLERATE);
+    m_StereoBuffer.set_sample_rate(48000);
 
     m_APU.reset(Gb_Apu::mode_dmg);
     m_APU.set_output(m_StereoBuffer.center(),
                      m_StereoBuffer.left(),
                      m_StereoBuffer.right());
 
-    m_SoundQueue.start(SAMPLERATE, 2);
-  }
-
-  void Gameboy::HandleReset(const Events::Reset &) {
-    Reset(false);
+    m_SoundQueue.start(48000, 2);
   }
 
 } // hijo

@@ -130,7 +130,7 @@ namespace hijo {
               uint16_t day = m_ShadowRTC.day & 0xFF;
               m_ShadowRTC.day = (data << 8) | day;
 
-              if (BIT(data, 6)) {
+              if (Bit(data, 6)) {
                 m_TimerHalted = true;
               } else {
                 m_TimerHalted = false;
@@ -191,10 +191,10 @@ namespace hijo {
     lines.push_back({"Shadow RTC - Days", fmt::format("{}", m_ShadowRTC.day & 0x1FF)});
     lines.push_back({"Shadow RTC - Halted",
                      fmt::format("{}",
-                                 BIT((m_ShadowRTC.day & 0xFF00) >> 8, 6) ? "Yes" : "No")});
+                                 Bit((m_ShadowRTC.day & 0xFF00) >> 8, 6) ? "Yes" : "No")});
     lines.push_back({"Shadow RTC - Day Carry Set",
                      fmt::format("{}",
-                                 BIT((m_ShadowRTC.day & 0xFF00) >> 8, 7) ? "Yes" : "No")});
+                                 Bit((m_ShadowRTC.day & 0xFF00) >> 8, 7) ? "Yes" : "No")});
 
     lines.push_back({"RTC - Seconds", fmt::format("{}", m_RTC.seconds)});
     lines.push_back({"RTC - Minutes", fmt::format("{}", m_RTC.minutes)});
@@ -202,10 +202,10 @@ namespace hijo {
     lines.push_back({"RTC - Days", fmt::format("{}", m_RTC.day & 0x1FF)});
     lines.push_back({"RTC - Halted",
                      fmt::format("{}",
-                                 BIT((m_RTC.day & 0xFF00) >> 8, 6) ? "Yes" : "No")});
+                                 Bit((m_RTC.day & 0xFF00) >> 8, 6) ? "Yes" : "No")});
     lines.push_back({"RTC - Day Carry Set",
                      fmt::format("{}",
-                                 BIT((m_RTC.day & 0xFF00) >> 8, 7) ? "Yes" : "No")});
+                                 Bit((m_RTC.day & 0xFF00) >> 8, 7) ? "Yes" : "No")});
 
 
     return lines;
