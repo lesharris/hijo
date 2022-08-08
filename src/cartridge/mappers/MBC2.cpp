@@ -57,9 +57,7 @@ namespace hijo {
     m_RomBankCount = bankCount;
     SetRomBank(1);
   }
-
-  void MBC2::SetRamBanks(uint8_t) {}
-
+  
   std::vector<Mapper::StatLine> MBC2::GetStats() {
     std::vector<StatLine> lines;
 

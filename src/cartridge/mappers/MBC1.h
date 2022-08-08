@@ -10,8 +10,6 @@ namespace hijo {
 
     void Write(uint16_t addr, uint8_t data) override;
 
-    void SetRomData(std::vector<uint8_t> &data) override;
-
     void SetRomBanks(uint16_t bankCount) override;
 
     void SetRamBanks(uint8_t bankCount) override;
@@ -26,7 +24,6 @@ namespace hijo {
   private:
     std::vector<std::vector<uint8_t>> m_RamBanks;
 
-    std::vector<uint8_t> m_Data;
     uint16_t m_RomBankCount;
     uint8_t m_RamBankCount;
 

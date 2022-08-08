@@ -16,8 +16,6 @@ namespace hijo {
 
     void SetRomBanks(uint16_t bankCount) override;
 
-    void SetRamBanks(uint8_t bankCount) override;
-
     std::vector<StatLine> GetStats() override;
 
   private:
@@ -25,7 +23,7 @@ namespace hijo {
 
   private:
     std::vector<uint8_t> m_Ram = std::vector<uint8_t>(512);
-    std::vector<uint8_t> m_Data;
+
     uint16_t m_RomBankCount;
 
     bool m_RamEnabled = false;

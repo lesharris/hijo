@@ -9,18 +9,6 @@ namespace hijo {
     // Nothing to do with no Mapper.
   }
 
-  void ROM::SetRomData(std::vector<uint8_t> &data) {
-    m_Data = data;
-  }
-
-  void ROM::SetRomBanks(uint16_t) {
-
-  }
-
-  void ROM::SetRamBanks(uint8_t) {
-
-  }
-
   std::vector<Mapper::StatLine> ROM::GetStats() {
     return std::vector<Mapper::StatLine>();
   }

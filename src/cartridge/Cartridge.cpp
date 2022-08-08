@@ -133,4 +133,10 @@ namespace hijo {
     }
   }
 
+  void Cartridge::Tick() {
+    if (m_Mapper) {
+      m_Mapper->Tick();
+    }
+  }
+
 } // hijo

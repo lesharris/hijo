@@ -37,14 +37,18 @@ namespace hijo {
 
     virtual void Write(uint16_t addr, uint8_t data) = 0;
 
-    virtual void SetRomData(std::vector<uint8_t> &data) = 0;
+    virtual void SetRomData(std::vector<uint8_t> &data) {
+      m_Data = data;
+    }
 
-    virtual void SetRomBanks(uint16_t bankCount) = 0;
+    virtual void SetRomBanks(uint16_t) {};
 
-    virtual void SetRamBanks(uint8_t bankCount) = 0;
+    virtual void SetRamBanks(uint8_t) {}
 
     virtual std::vector<StatLine> GetStats() = 0;
-    
+
+    virtual void Tick() {}
+
     void SetFeatures(bool ram, bool battery, bool timer, bool rumble) {
       m_HasRam = ram;
       m_HasBattery = battery;
@@ -53,6 +57,8 @@ namespace hijo {
     }
 
   protected:
+    std::vector<uint8_t> m_Data;
+
     bool m_HasRam = false;
     bool m_HasBattery = false;
     bool m_HasTimer = false;

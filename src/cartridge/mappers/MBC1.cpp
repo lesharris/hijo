@@ -86,10 +86,6 @@ namespace hijo {
     }
   }
 
-  void MBC1::SetRomData(std::vector<uint8_t> &data) {
-    m_Data = data;
-  }
-
   void MBC1::SetRomBanks(uint16_t bankCount) {
     m_RomBankCount = bankCount;
     SetRomBank(0);

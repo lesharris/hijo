@@ -68,6 +68,8 @@ namespace hijo {
 
     void Write(uint16_t addr, uint8_t data);
 
+    void Tick();
+
     const HeaderData &Header() const {
       return m_Header;
     }
@@ -81,7 +83,7 @@ namespace hijo {
 
   private:
     friend class UI;
-    
+
   private:
     HeaderData m_Header;
     std::vector<uint8_t> m_Data;
