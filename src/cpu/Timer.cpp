@@ -14,6 +14,9 @@ namespace hijo {
 
     bool update = false;
 
+    if ((tac & 0x4) == 0)
+      return;
+
     switch (tac & 0x3) {
       case 0:
         update = (prev & (1 << 9)) && (!(div & (1 << 9)));
@@ -45,7 +48,8 @@ namespace hijo {
   }
 
   void Timer::Reset() {
-    div = 0xAC00;
+    div = 0;
+    tima = 0;
   }
 
   void Timer::Write(uint16_t address, uint8_t value) {

@@ -16,9 +16,6 @@ namespace hijo {
     void Write(uint16_t addr, uint8_t data) override;
 
     std::vector<StatLine> GetStats() override;
-
-  private:
-    std::vector<uint8_t> m_Data;
   };
 
 } // hijo
