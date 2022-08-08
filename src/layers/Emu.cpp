@@ -75,12 +75,12 @@ namespace hijo {
 
     //m_GB.InsertCartridge("cpu_instrs.gb"); // PASSED
 
-    // m_GB.InsertCartridge("pokemonred.gb");
+    //m_GB.InsertCartridge("pokemonred.gb");
     //m_GB.InsertCartridge("finalfantasyadventure.gb");
-    m_GB.InsertCartridge("linksawakening.gb");
+    //m_GB.InsertCartridge("linksawakening.gb");
     //m_GB.InsertCartridge("kirbysdreamland.gb");
     //m_GB.InsertCartridge("supermarioland2.gb");
-    //m_GB.InsertCartridge("supermarioland.gb");
+    //  m_GB.InsertCartridge("supermarioland.gb");
     //m_GB.InsertCartridge("tetris.gb");
     //m_GB.InsertCartridge("drmario.gb");
     //m_GB.InsertCartridge("alleyway.gb");

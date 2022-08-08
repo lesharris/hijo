@@ -9,6 +9,7 @@
     "spdlog",
     "entt",
     "catch2",
-    "sdl2"
+    "sdl2",
+    "nativefiledialog"
   ]
 }

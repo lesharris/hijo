@@ -12,6 +12,8 @@ namespace hijo {
 
     bool Transferring();
 
+    void Reset();
+
   private:
     bool active;
     uint8_t byte;

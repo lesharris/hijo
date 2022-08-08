@@ -22,7 +22,7 @@ namespace hijo {
 
     auto &bus = Gameboy::Get();
     auto &ppu = bus.m_PPU;
-    
+
     uint16_t addr = (value * 0x100) + byte;
 
     ppu.OAMWrite(0xFE00 | byte, bus.cpuRead(addr));
@@ -33,5 +33,9 @@ namespace hijo {
 
   bool DMA::Transferring() {
     return active;
+  }
+
+  void DMA::Reset() {
+    active = false;
   }
 } // hijo

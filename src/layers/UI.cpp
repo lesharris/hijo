@@ -1,6 +1,8 @@
 #include "UI.h"
 #include "imgui_internal.h"
 
+#include <nfd.h>
+
 #include "system/Gameboy.h"
 #include "cpu/Interrupts.h"
 #include "display/PPU.h"
@@ -109,6 +111,30 @@ namespace hijo {
 
     if (ImGui::BeginMenuBar()) {
       if (ImGui::BeginMenu("File")) {
+        if (ImGui::MenuItem("Open ROM...", NULL)) {
+          nfdchar_t *outPath = nullptr;
+          nfdresult_t result = NFD_OpenDialog(NULL, NULL, &outPath);
+
+          switch (result) {
+            case NFD_OKAY: {
+              std::string path{outPath};
+              EventManager::Dispatcher().trigger(Events::LoadROM{path});
+              delete outPath;
+            }
+              break;
+            case NFD_CANCEL:
+              break;
+            case NFD_ERROR:
+              spdlog::get("console")->error("{}", NFD_GetError());
+              break;
+          }
+        }
+
+        if (ImGui::MenuItem("Reset")) {
+          EventManager::Dispatcher().trigger(Events::Reset{});
+        }
+
+        ImGui::Separator();
         if (ImGui::MenuItem("Quit", NULL)) {
           EventManager::Dispatcher().trigger<Events::WantQuit>();
         }
@@ -162,7 +188,6 @@ namespace hijo {
 
 
         if (gb->m_Cartridge) {
-
           romViewer.DrawWindow("ROM", &gb->m_Cartridge->Data(), 32 * 1024);
         }
       }
@@ -354,13 +379,21 @@ namespace hijo {
     Gameboy *gb = app.System<Gameboy>();
     auto &cpu = gb->m_Cpu;
 
-    if (cpu.m_Disassembly.empty()) {
+
+    if (cpu.m_Disassembly.empty() && gb->m_Cartridge) {
       cpu.Disassemble(0, (64 * 1024) - 1);
     }
 
     if (!ImGui::Begin("Disassembly", &m_ShowDisassembly)) {
       ImGui::End();
     } else {
+
+      if (!gb->m_Cartridge) {
+        ImGui::Text("No Cartridge Loaded");
+        ImGui::End();
+        return;
+      }
+
       if (ImGui::BeginTable("disa", 3, ImGuiTableFlags_ScrollY |
                                        ImGuiTableFlags_BordersOuterH |
                                        ImGuiTableFlags_BordersOuterV |
@@ -464,30 +497,32 @@ namespace hijo {
       ImGui::TableNextRow();
       ImGui::TableSetColumnIndex(0);
 
-      if (ImGui::Button(gb->Running() ? "Pause" : "Run")) {
-        EventManager::Dispatcher().enqueue<Events::ExecuteCPU>({!gb->Running()});
-      }
-
-      ImGui::SameLine();
-
-      if (!gb->Running()) {
-        if (ImGui::Button("Step")) {
-          EventManager::Dispatcher().enqueue<Events::StepCPU>({});
+      if (gb->m_Cartridge) {
+        if (ImGui::Button(gb->Running() ? "Pause" : "Run")) {
+          EventManager::Dispatcher().enqueue<Events::ExecuteCPU>({!gb->Running()});
         }
-      }
 
-      ImGui::SameLine();
+        ImGui::SameLine();
 
-      if (!gb->Running()) {
-        static uint16_t addr = 0;
-        ImGui::InputScalar("Run to", ImGuiDataType_U16, &addr, NULL, NULL, "%04X");
-        if (ImGui::Button("Go")) {
-          EventManager::Dispatcher().enqueue<Events::ExecuteUntil>({addr});
+        if (!gb->Running()) {
+          if (ImGui::Button("Step")) {
+            EventManager::Dispatcher().enqueue<Events::StepCPU>({});
+          }
+        }
+
+        ImGui::SameLine();
+
+        if (!gb->Running()) {
+          static uint16_t addr = 0;
+          ImGui::InputScalar("Run to", ImGuiDataType_U16, &addr, NULL, NULL, "%04X");
+          if (ImGui::Button("Go")) {
+            EventManager::Dispatcher().enqueue<Events::ExecuteUntil>({addr});
+          }
         }
       }
 
       ImGui::TableSetColumnIndex(1);
-      auto cycleInfo = fmt::format("Total Cycles: {}", gb->Cycles());
+      auto cycleInfo = fmt::format("T Cycles per Frame: {}", gb->Cycles());
       auto posX = (ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize(cycleInfo.c_str()).x
                    - ImGui::GetScrollX() - 2 * ImGui::GetStyle().ItemSpacing.x);
       if (posX > ImGui::GetCursorPosX())
@@ -813,13 +848,20 @@ namespace hijo {
   }
 
   void UI::CartridgeRuntime() {
-    auto &bus = Gameboy::Get();
-    auto cartridge = bus.m_Cartridge;
-    const auto &statLines = cartridge->m_Mapper->GetStats();
-
     if (!ImGui::Begin("Cart. Runtime", &m_ShowCartridgeRuntime)) {
       ImGui::End();
     } else {
+      auto &bus = Gameboy::Get();
+      auto cartridge = bus.m_Cartridge;
+
+      if (!cartridge) {
+        ImGui::Text("No Cartridge Loaded");
+        ImGui::End();
+        return;
+      }
+
+      const auto &statLines = cartridge->m_Mapper->GetStats();
+
       ImGui::BeginTable("cinfo5", 2, ImGuiTableFlags_RowBg);
       ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
       ImGui::TableSetupColumn("value", ImGuiTableFlags_None);

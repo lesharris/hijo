@@ -25,6 +25,8 @@ namespace hijo {
 
     void Init();
 
+    void Reset();
+
     bool ButtonSelected();
 
     bool DirectionSelected();

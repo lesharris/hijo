@@ -1,6 +1,8 @@
 #pragma once
 
 #include <vector>
+#include <string>
+
 #include "raylib.h"
 
 #include "Event.h"
@@ -132,8 +134,13 @@ namespace hijo::Events {
     HandleAudio() : Event() {}
   };
 
-  struct SaveRam : public Event {
-    SaveRam() : Event() {}
+  struct LoadROM : public Event {
+    LoadROM(const std::string &path) : Event(), path(path) {}
+
+    std::string path;
   };
 
+  struct Reset : public Event {
+    Reset() : Event() {}
+  };
 }

@@ -168,4 +168,17 @@ namespace hijo {
         break;
     }
   }
+
+  void Controller::Reset() {
+    m_ButtonSelected = false;
+    m_DirectionSelected = false;
+    m_Buttons.start = false;
+    m_Buttons.select = false;
+    m_Buttons.right = false;
+    m_Buttons.left = false;
+    m_Buttons.up = false;
+    m_Buttons.down = false;
+    m_Buttons.a = false;
+    m_Buttons.b = false;
+  }
 } // hijo

@@ -60,12 +60,18 @@ namespace hijo {
       return m_PPU.VideoBuffer();
     }
 
+    void Reset(bool clearCartridge = true);
+
   private:
     void HandleCPUExecution(const Events::ExecuteCPU &event);
 
     void HandleCPUStep(const Events::StepCPU &event);
 
     void HandleExecuteUntil(const Events::ExecuteUntil &event);
+
+    void HandleLoadRom(const Events::LoadROM &event);
+
+    void HandleReset(const Events::Reset &event);
 
   private:
     friend class UI;

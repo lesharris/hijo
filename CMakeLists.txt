@@ -55,6 +55,7 @@ find_package(ZLIB REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(EnTT CONFIG REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
+find_package(unofficial-nativefiledialog CONFIG REQUIRED)
 
 # Our App!
 add_executable(${PROJECT_NAME}
@@ -132,7 +133,10 @@ add_executable(${PROJECT_NAME}
     src/sound/audio/Basic_Gb_Apu.h
     src/sound/Sound_Queue.cpp
     src/sound/Sound_Queue.h
-    src/cartridge/mappers/MBC2.cpp src/cartridge/mappers/MBC2.h src/cartridge/mappers/MBC3.cpp src/cartridge/mappers/MBC3.h)
+    src/cartridge/mappers/MBC2.cpp
+    src/cartridge/mappers/MBC2.h
+    src/cartridge/mappers/MBC3.cpp
+    src/cartridge/mappers/MBC3.h)
 
 # Compile Options
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
@@ -165,7 +169,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ZLIB::ZLIB
     spdlog::spdlog
     EnTT::EnTT
-    SDL2::SDL2-static)
+    SDL2::SDL2-static
+    unofficial::nativefiledialog::nfd
+    )
 
 if (APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE "-framework IOKit")

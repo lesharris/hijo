@@ -4,8 +4,6 @@
 
 #include "display/LCD.h"
 
-#include <raylib.h>
-
 namespace hijo {
 
   Gameboy::Gameboy() {
@@ -13,25 +11,7 @@ namespace hijo {
 
     app.System(this);
 
-    memset(m_ExtRam, 0, 1024 * 8);
-    memset(m_WorkRam, 0, 1024 * 8);
-    memset(m_HighRam, 0, 127);
-    memset(m_Serial, 0, 2);
-
-    m_Timer.div = 0xABCC;
-
-    memset(m_SampleBuffer, 0, sizeof(m_SampleBuffer));
-
-    // m_APU.reduce_clicks(true);
-    m_StereoBuffer.clock_rate(4194304);
-    m_StereoBuffer.set_sample_rate(SAMPLERATE);
-
-    m_APU.reset(Gb_Apu::mode_dmg);
-    m_APU.set_output(m_StereoBuffer.center(),
-                     m_StereoBuffer.left(),
-                     m_StereoBuffer.right());
-
-    m_SoundQueue.start(SAMPLERATE, 2);
+    Reset();
 
     EventManager::Get().Attach<
         Events::ExecuteCPU,
@@ -47,12 +27,23 @@ namespace hijo {
         Events::ExecuteUntil,
         &Gameboy::HandleExecuteUntil
     >(this);
+
+    EventManager::Get().Attach<
+        Events::LoadROM,
+        &Gameboy::HandleLoadRom
+    >(this);
+
+    EventManager::Get().Attach<
+        Events::Reset,
+        &Gameboy::HandleReset
+    >(this);
   }
 
   Gameboy::~Gameboy() {
     m_SoundQueue.stop();
     EventManager::Get().DetachAll(this);
   }
+
 
   void Gameboy::cpuWrite(uint16_t addr, uint8_t data) {
     if (addr < 0x8000) {
@@ -256,7 +247,7 @@ namespace hijo {
     if (m_Run) {
 
       m_Cartridge->Tick(timestep);
-      
+
       do {
         if (m_TargetActive && m_Cpu.regs.pc == m_TargetAddr) {
           m_TargetActive = false;
@@ -326,6 +317,54 @@ namespace hijo {
     uint16_t high = cpuRead(addr + 1);
 
     return low | (high << 8);
+  }
+
+  void Gameboy::HandleLoadRom(const Events::LoadROM &event) {
+    Reset();
+    InsertCartridge(event.path);
+  }
+
+  void Gameboy::Reset(bool clearCartridge) {
+    m_Run = false;
+
+    if (m_SoundQueue.currently_playing()) {
+      m_SoundQueue.stop();
+    }
+
+    m_Cpu.Reset();
+    m_DMA.Reset();
+    m_Timer.Reset();
+    m_Controller.Reset();
+
+    m_PPU.Init();
+
+    if (clearCartridge)
+      m_Cartridge = nullptr;
+
+    memset(m_ExtRam, 0, 1024 * 8);
+    memset(m_WorkRam, 0, 1024 * 8);
+    memset(m_HighRam, 0, 127);
+    memset(m_Serial, 0, 2);
+
+    m_Timer.div = 0xABCC;
+
+    memset(m_SampleBuffer, 0, sizeof(m_SampleBuffer));
+
+    m_StereoBuffer.clear();
+    // m_APU.reduce_clicks(true);
+    m_StereoBuffer.clock_rate(4194304);
+    m_StereoBuffer.set_sample_rate(SAMPLERATE);
+
+    m_APU.reset(Gb_Apu::mode_dmg);
+    m_APU.set_output(m_StereoBuffer.center(),
+                     m_StereoBuffer.left(),
+                     m_StereoBuffer.right());
+
+    m_SoundQueue.start(SAMPLERATE, 2);
+  }
+
+  void Gameboy::HandleReset(const Events::Reset &) {
+    Reset(false);
   }
 
 } // hijo
