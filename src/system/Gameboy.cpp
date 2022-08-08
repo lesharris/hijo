@@ -34,6 +34,11 @@ namespace hijo {
     >(this);
 
     EventManager::Get().Attach<
+        Events::UnloadROM,
+        &Gameboy::HandleUnloadRom
+    >(this);
+
+    EventManager::Get().Attach<
         Events::Reset,
         &Gameboy::HandleReset
     >(this);
@@ -290,6 +295,12 @@ namespace hijo {
 
   void Gameboy::HandleReset(const Events::Reset &) {
     Reset(false);
+    EventManager::Dispatcher().trigger(Events::VBlank{});
+  }
+
+  void Gameboy::HandleUnloadRom(const Events::UnloadROM &) {
+    Reset();
+    EventManager::Dispatcher().trigger(Events::VBlank{});
   }
 
   void Gameboy::HandleExecuteUntil(const Events::ExecuteUntil &event) {

@@ -33,6 +33,9 @@ namespace hijo {
     uint8_t bufferHeight = 144;
     uint8_t bufferWidth = 160;
 
+    if (!m_GB.CartridgeLoaded())
+      return;
+
     auto scale = scw / bufferWidth;
 
     auto &lcd = LCD::Get();

@@ -130,6 +130,12 @@ namespace hijo {
           }
         }
 
+        ImGui::Separator();
+        
+        if (ImGui::MenuItem("Unload ROM")) {
+          EventManager::Dispatcher().trigger(Events::UnloadROM{});
+        }
+
         if (ImGui::MenuItem("Reset")) {
           EventManager::Dispatcher().trigger(Events::Reset{});
         }
@@ -712,7 +718,7 @@ namespace hijo {
       ImGui::End();
     } else {
       if (!cartridge) {
-        ImGui::Text("No cartridge loaded!");
+        ImGui::Text("No Cartridge Loaded");
       } else {
         const auto &header = cartridge->Header();
 

@@ -140,6 +140,10 @@ namespace hijo::Events {
     std::string path;
   };
 
+  struct UnloadROM : public Event {
+    UnloadROM() : Event() {}
+  };
+
   struct Reset : public Event {
     Reset() : Event() {}
   };

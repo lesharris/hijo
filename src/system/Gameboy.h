@@ -60,6 +60,10 @@ namespace hijo {
       return m_PPU.VideoBuffer();
     }
 
+    bool CartridgeLoaded() {
+      return m_Cartridge != nullptr;
+    }
+
     void Reset(bool clearCartridge = true);
 
     /* Events */
@@ -73,6 +77,8 @@ namespace hijo {
     void HandleLoadRom(const Events::LoadROM &event);
 
     void HandleReset(const Events::Reset &event);
+
+    void HandleUnloadRom(const Events::UnloadROM &event);
 
   private:
     friend class UI;

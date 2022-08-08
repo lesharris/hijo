@@ -69,7 +69,6 @@ namespace hijo {
         }
       };
 
-
       BeginTextureMode(m_TileTexture);
       ClearBackground(m_DefaultBackground);
       {
