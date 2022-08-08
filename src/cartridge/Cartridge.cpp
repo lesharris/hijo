@@ -5,6 +5,7 @@
 
 #include "mappers/ROM.h"
 #include "mappers/MBC1.h"
+#include "mappers/MBC2.h"
 
 namespace hijo {
   std::unique_ptr<Cartridge> Cartridge::Load(const std::string &path) {
@@ -109,6 +110,12 @@ namespace hijo {
         m_Mapper->SetRomData(m_Data);
         m_Mapper->SetRomBanks(m_Header.romInfo.romBankCount);
         m_Mapper->SetRamBanks(m_Header.ramInfo.ramBankCount);
+        break;
+
+      case Mapper::Type::MBC2:
+        m_Mapper = std::make_unique<MBC2>();
+        m_Mapper->SetRomData(m_Data);
+        m_Mapper->SetRomBanks(m_Header.romInfo.romBankCount);
         break;
 
       default:

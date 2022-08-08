@@ -132,7 +132,7 @@ add_executable(${PROJECT_NAME}
     src/sound/audio/Basic_Gb_Apu.h
     src/sound/Sound_Queue.cpp
     src/sound/Sound_Queue.h
-    )
+    src/cartridge/mappers/MBC2.cpp src/cartridge/mappers/MBC2.h)
 
 # Compile Options
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)

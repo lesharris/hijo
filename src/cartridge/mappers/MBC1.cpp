@@ -108,7 +108,7 @@ namespace hijo {
   }
 
   void MBC1::SetRomBank(uint8_t value) {
-    m_RomBankValue = value % m_RamBankCount;
+    m_RomBankValue = value % m_RomBankCount;
     m_RomBankBase = 0x4000 * value;
   }
 
