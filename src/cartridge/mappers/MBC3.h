@@ -22,6 +22,8 @@ namespace hijo {
     };
 
   public:
+    MBC3(const std::string &path) : Mapper(path) {}
+
     uint8_t Read(uint16_t addr) override;
 
     void Write(uint16_t addr, uint8_t data) override;
@@ -38,6 +40,10 @@ namespace hijo {
     void SetRomBank(uint8_t value);
 
     void SetRamBank(uint8_t value);
+
+    void SaveRam();
+
+    void LoadRam();
 
   private:
     std::vector<std::vector<uint8_t>> m_RamBanks;

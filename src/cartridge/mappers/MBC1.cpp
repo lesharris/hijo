@@ -1,6 +1,7 @@
 
 #include "MBC1.h"
 #include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 namespace hijo {
 
@@ -29,6 +30,9 @@ namespace hijo {
   void MBC1::Write(uint16_t addr, uint8_t data) {
     if (addr < 0x2000) {
       m_RamEnabled = ((data & 0xF) == 0xA);
+      if (!m_RamEnabled && m_HasBattery) {
+        SaveRam();
+      }
     }
 
     switch (addr & 0xE000) {
@@ -46,26 +50,12 @@ namespace hijo {
         // Ram Bank Number
       case 0x4000:
         SetRamBank(data & 0x3);
-
-        if (m_RamBanking) {
-          // cart save here
-          /*  if (cart_need_save()) {
-                cart_battery_save();
-            }*/
-        }
         break;
 
         // Banking Mode Select
       case 0x6000:
         m_BankingMode = data & 1;
         m_RamBanking = m_BankingMode;
-
-        if (m_RamBanking) {
-          // cart save here
-          /*  if (cart_need_save()) {
-                cart_battery_save();
-            }*/
-        }
         break;
 
         // RAM Write
@@ -80,7 +70,7 @@ namespace hijo {
         m_RamBanks[m_RamBankValue][addr - 0xA000] = data;
 
         if (m_HasBattery) {
-          m_NeedsSave = true;
+          SaveRam();
         }
         break;
     }
@@ -101,6 +91,8 @@ namespace hijo {
         m_RamBanks.push_back(bank);
       }
     }
+
+    LoadRam();
   }
 
   void MBC1::SetRomBank(uint8_t value) {
@@ -111,7 +103,6 @@ namespace hijo {
   void MBC1::SetRamBank(uint8_t value) {
     m_RamBankValue = value;
   }
-
 
   std::vector<Mapper::StatLine> MBC1::GetStats() {
     std::vector<StatLine> lines;
@@ -131,5 +122,43 @@ namespace hijo {
     lines.push_back({"Needs Save?", m_NeedsSave ? "Yes" : "No"});
 
     return lines;
+  }
+
+  void MBC1::SaveRam() {
+    if (m_RamBankCount == 0)
+      return;
+
+    std::ofstream ramFile(fmt::format("{}.sav", path), std::ios::out | std::ios::binary);
+
+    if (!ramFile) {
+      spdlog::get("console")->warn("Couldn't open save file for saving!");
+      return;
+    }
+
+    for (auto n = 0; n < m_RamBankCount; n++) {
+      auto &bank = m_RamBanks[n];
+      ramFile.write(reinterpret_cast<const char *>(&bank[0]), 0x2000);
+    }
+
+    ramFile.close();
+  }
+
+  void MBC1::LoadRam() {
+    if (m_RamBankCount == 0)
+      return;
+
+    std::ifstream ramFile(fmt::format("{}.sav", path), std::ios::binary);
+
+    if (!ramFile) {
+      spdlog::get("console")->warn("Couldn't open save file for loading!");
+      return;
+    }
+
+    for (auto n = 0; n < m_RamBankCount; n++) {
+      std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(ramFile), {});
+      m_RamBanks[n] = buffer;
+    }
+
+    ramFile.close();
   }
 } // hijo

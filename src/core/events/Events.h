@@ -132,4 +132,8 @@ namespace hijo::Events {
     HandleAudio() : Event() {}
   };
 
+  struct SaveRam : public Event {
+    SaveRam() : Event() {}
+  };
+
 }

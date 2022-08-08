@@ -14,6 +14,8 @@ namespace hijo {
   }
 
   Cartridge::Cartridge(const std::string &path) {
+    m_Path = path;
+
     std::ifstream stream(path.c_str(), std::ios::binary | std::ios::ate);
 
     if (!stream.good()) {
@@ -102,32 +104,33 @@ namespace hijo {
   void Cartridge::LoadMapper() {
     switch (m_Header.mapperInfo.type) {
       case Mapper::Type::ROM:
-        m_Mapper = std::make_unique<ROM>();
+        m_Mapper = std::make_unique<ROM>(m_Path);
         m_Mapper->SetRomData(m_Data);
         break;
 
       case Mapper::Type::MBC1:
-        m_Mapper = std::make_unique<MBC1>();
+        m_Mapper = std::make_unique<MBC1>(m_Path);
         m_Mapper->SetRomData(m_Data);
         m_Mapper->SetRomBanks(m_Header.romInfo.romBankCount);
         m_Mapper->SetRamBanks(m_Header.ramInfo.ramBankCount);
         break;
 
       case Mapper::Type::MBC2:
-        m_Mapper = std::make_unique<MBC2>();
+        m_Mapper = std::make_unique<MBC2>(m_Path);
         m_Mapper->SetRomData(m_Data);
         m_Mapper->SetRomBanks(m_Header.romInfo.romBankCount);
+        m_Mapper->SetRamBanks(0);
         break;
 
       case Mapper::Type::MBC3:
-        m_Mapper = std::make_unique<MBC3>();
+        m_Mapper = std::make_unique<MBC3>(m_Path);
         m_Mapper->SetRomData(m_Data);
         m_Mapper->SetRomBanks(m_Header.romInfo.romBankCount);
         m_Mapper->SetRamBanks(m_Header.ramInfo.ramBankCount);
         break;
 
       default:
-        m_Mapper = std::make_unique<ROM>();
+        m_Mapper = std::make_unique<ROM>(m_Path);
         m_Mapper->SetRomData(m_Data);
         spdlog::get("console")->warn("Unsupported Mapper type: {}, using ROM mapper.", m_Header.cartridgeType);
         break;
@@ -146,5 +149,6 @@ namespace hijo {
       m_Mapper->Tick(timestep);
     }
   }
+
 
 } // hijo

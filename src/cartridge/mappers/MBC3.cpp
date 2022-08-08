@@ -2,6 +2,7 @@
 
 #include "common/common.h"
 #include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 #include "system/Gameboy.h"
 
@@ -48,6 +49,7 @@ namespace hijo {
       m_RamEnabled = ((data & 0xF) == 0xA);
       if (!m_RamEnabled) {
         m_RTCBanked = false;
+        // EventManager::Dispatcher().trigger(Events::SaveRam{});
       }
     }
 
@@ -141,7 +143,7 @@ namespace hijo {
         m_RamBanks[m_RamBankValue][addr - 0xA000] = data;
 
         if (m_HasBattery) {
-          m_NeedsSave = true;
+          SaveRam();
         }
         break;
     }
@@ -162,6 +164,8 @@ namespace hijo {
         m_RamBanks.push_back(bank);
       }
     }
+
+    LoadRam();
   }
 
   std::vector<Mapper::StatLine> MBC3::GetStats() {
@@ -253,5 +257,43 @@ namespace hijo {
 
   void MBC3::SetRamBank(uint8_t value) {
     m_RamBankValue = value;
+  }
+
+  void MBC3::SaveRam() {
+    if (m_RamBankCount == 0)
+      return;
+
+    std::ofstream ramFile(fmt::format("{}.sav", path), std::ios::out | std::ios::binary);
+
+    if (!ramFile) {
+      spdlog::get("console")->warn("Couldn't open save file for saving!");
+      return;
+    }
+
+    for (auto n = 0; n < m_RamBankCount; n++) {
+      auto &bank = m_RamBanks[n];
+      ramFile.write(reinterpret_cast<const char *>(&bank[0]), 0x2000);
+    }
+
+    ramFile.close();
+  }
+
+  void MBC3::LoadRam() {
+    if (m_RamBankCount == 0)
+      return;
+
+    std::ifstream ramFile(fmt::format("{}.sav", path), std::ios::binary);
+
+    if (!ramFile) {
+      spdlog::get("console")->warn("Couldn't open save file for loading!");
+      return;
+    }
+
+    for (auto n = 0; n < m_RamBankCount; n++) {
+      std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(ramFile), {});
+      m_RamBanks[n] = buffer;
+    }
+
+    ramFile.close();
   }
 } // hijo

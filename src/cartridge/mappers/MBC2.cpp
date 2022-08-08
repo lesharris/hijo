@@ -2,6 +2,7 @@
 #include "MBC2.h"
 
 #include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 namespace hijo {
   uint8_t MBC2::Read(uint16_t addr) {
@@ -36,6 +37,10 @@ namespace hijo {
       } else {
         // Enable/Disable RAM
         m_RamEnabled = data == 0x0A;
+
+        if (!m_RamEnabled) {
+          SaveRam();
+        }
       }
 
       return;
@@ -46,6 +51,8 @@ namespace hijo {
         return;
 
       m_Ram[addr & 0x1FF] = data & 0xF;
+
+      SaveRam();
     }
   }
 
@@ -75,5 +82,36 @@ namespace hijo {
   void MBC2::SetRomBank(uint8_t value) {
     m_RomBankValue = value % m_RomBankCount;
     m_RomBankBase = 0x4000 * value;
+  }
+
+  void MBC2::SaveRam() {
+    std::ofstream ramFile(fmt::format("{}.sav", path), std::ios::out | std::ios::binary);
+
+    if (!ramFile) {
+      spdlog::get("console")->warn("Couldn't open save file for saving!");
+      return;
+    }
+
+    ramFile.write(reinterpret_cast<const char *>(&m_Ram[0]), 512);
+
+    ramFile.close();
+  }
+
+  void MBC2::LoadRam() {
+    std::ifstream ramFile(fmt::format("{}.sav", path), std::ios::binary);
+
+    if (!ramFile) {
+      spdlog::get("console")->warn("Couldn't open save file for loading!");
+      return;
+    }
+
+    std::vector<uint8_t> buffer(std::istreambuf_iterator<char>(ramFile), {});
+    m_Ram = buffer;
+
+    ramFile.close();
+  }
+
+  void MBC2::SetRamBanks(uint8_t) {
+    LoadRam();
   }
 } // hijo

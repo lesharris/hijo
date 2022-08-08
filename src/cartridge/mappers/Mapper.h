@@ -4,6 +4,9 @@
 #include <vector>
 #include <string>
 
+#include <iostream>
+#include <fstream>
+
 namespace hijo {
 
   class Mapper {
@@ -31,6 +34,8 @@ namespace hijo {
     };
 
   public:
+    Mapper(const std::string &path) : path(path) {}
+
     virtual ~Mapper() = default;
 
     virtual uint8_t Read(uint16_t addr) = 0;
@@ -63,6 +68,8 @@ namespace hijo {
     bool m_HasBattery = false;
     bool m_HasTimer = false;
     bool m_HasRumble = false;
+
+    std::string path;
   };
 
 } // hijo

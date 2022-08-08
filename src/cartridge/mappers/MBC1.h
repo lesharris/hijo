@@ -6,6 +6,8 @@ namespace hijo {
 
   class MBC1 : public Mapper {
   public:
+    MBC1(const std::string &path) : Mapper(path) {}
+
     uint8_t Read(uint16_t addr) override;
 
     void Write(uint16_t addr, uint8_t data) override;
@@ -17,6 +19,10 @@ namespace hijo {
     std::vector<StatLine> GetStats() override;
 
   private:
+    void SaveRam();
+
+    void LoadRam();
+
     void SetRomBank(uint8_t value);
 
     void SetRamBank(uint8_t value);

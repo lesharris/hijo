@@ -88,6 +88,7 @@ namespace hijo {
     HeaderData m_Header;
     std::vector<uint8_t> m_Data;
     std::unique_ptr<Mapper> m_Mapper;
+    std::string m_Path;
 
     std::map<std::string, std::string> m_NewLicenseeMap = {
         {"00", "None"},

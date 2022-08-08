@@ -9,6 +9,8 @@ namespace hijo {
 
   class ROM : public Mapper {
   public:
+    ROM(const std::string &path) : Mapper(path) {}
+
     uint8_t Read(uint16_t addr) override;
 
     void Write(uint16_t addr, uint8_t data) override;
