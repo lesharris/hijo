@@ -93,7 +93,7 @@ namespace hijo {
 
   public:
     void Init();
-    
+
     void Tick();
 
     void OAMWrite(uint16_t addr, uint8_t data);
@@ -148,6 +148,8 @@ namespace hijo {
 
   private:
     friend class UI;
+
+    friend class Gameboy;
 
   private:
     PixelFifo fifo;

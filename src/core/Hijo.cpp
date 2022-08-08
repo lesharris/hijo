@@ -11,6 +11,8 @@
 
 #include "system/Gameboy.h"
 
+#include <SDL.h>
+
 namespace hijo {
   void Hijo::Run() {
     if (!m_GameLayers)
@@ -37,15 +39,6 @@ namespace hijo {
       for (const auto &layer: *m_GameLayers) {
         layer->Update(m_Timestep);
       }
-
-      BeginTextureMode(m_RenderTexture);
-      ClearBackground(m_DefaultBackground);
-      for (auto layer: *m_GameLayers) {
-        if (layer->RenderTarget()) {
-          layer->Render();
-        }
-      }
-      EndTextureMode();
 
       auto displayTile = [](uint16_t startLocation, uint16_t tileNum, int x, int y) {
         auto &gb = Gameboy::Get();
@@ -139,6 +132,8 @@ namespace hijo {
 
       EndDrawing();
 
+      EventManager::Dispatcher().trigger(Events::HandleAudio{});
+
       lastTime = m_CurrentTime;
     } while (m_Running && !WindowShouldClose());
   }
@@ -155,12 +150,9 @@ namespace hijo {
 
     SetExitKey(0);
 
-    SetTargetFPS(60);
+    SetTargetFPS(62);
 
     while (!IsWindowReady());
-
-    InitAudioDevice();
-
     m_Camera.target = {0, 0};
     m_Camera.offset = {0, 0};
     m_Camera.rotation = 0.0f;
@@ -180,6 +172,8 @@ namespace hijo {
     m_PackedTileTexture = LoadRenderTexture(32 * 16, 32 * 24);
     SetTextureFilter(m_PackedTileTexture.texture, TEXTURE_FILTER_POINT);
 
+    SDL_Init(SDL_INIT_AUDIO);
+
     EventManager::Get().Attach<
         Events::ViewportResized,
         &Hijo::HandleViewportResized
@@ -194,6 +188,11 @@ namespace hijo {
         Events::WantQuit,
         &Hijo::HandleWantQuit
     >(this);
+
+    EventManager::Get().Attach<
+        Events::VBlank,
+        &Hijo::HandleVBlank
+    >(this);
   }
 
   Hijo::~Hijo() {
@@ -204,7 +203,7 @@ namespace hijo {
     UnloadRenderTexture(m_RenderTexture);
     UnloadRenderTexture(m_TileTexture);
     UnloadRenderTexture(m_PackedTileTexture);
-    CloseAudioDevice();
+    SDL_Quit();
     CloseWindow();
   }
 
@@ -269,6 +268,17 @@ namespace hijo {
 
   void Hijo::HandleWantQuit(const Events::WantQuit &) {
     m_Running = false;
+  }
+
+  void Hijo::HandleVBlank(const Events::VBlank &) {
+    BeginTextureMode(m_RenderTexture);
+    ClearBackground(m_DefaultBackground);
+    for (auto layer: *m_GameLayers) {
+      if (layer->RenderTarget()) {
+        layer->Render();
+      }
+    }
+    EndTextureMode();
   }
 
 } // hijo

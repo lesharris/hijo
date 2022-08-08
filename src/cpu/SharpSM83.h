@@ -105,6 +105,8 @@ namespace hijo {
 
     uint16_t reverse(uint16_t n);
 
+    void Cycle(uint8_t cycles);
+
   private:
     void ProcNone();
 
@@ -191,7 +193,7 @@ namespace hijo {
     uint8_t CPU_FLAG_C() {
       return BIT(regs.f, 4);
     }
-    
+
   private:
     Registers regs;
     Instructions instrs;
@@ -200,6 +202,7 @@ namespace hijo {
     uint16_t m_MemoryDestination;
     bool DestinationIsMemory;
     uint8_t m_CurrentOpcode;
+    uint8_t m_CurrentCycles;
     Instructions::Opcode *m_CurrentInstruction;
 
     std::vector<DisassemblyLine> m_Disassembly;

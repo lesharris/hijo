@@ -4,6 +4,7 @@
 #include "system/Gameboy.h"
 #include "cpu/Interrupts.h"
 #include "display/PPU.h"
+#include "display/LCD.h"
 
 namespace hijo {
   void UI::OnAttach() {
@@ -130,13 +131,19 @@ namespace hijo {
         }
 
         if (ImGui::BeginMenu("Graphics")) {
+          ImGui::MenuItem("PPU", NULL, &m_ShowPPU);
           ImGui::MenuItem("Tile Viewer", NULL, &m_ShowTiles);
           ImGui::MenuItem("OAM Viewer", NULL, &m_ShowOAM);
           ImGui::EndMenu();
         }
 
         ImGui::Separator();
-        ImGui::MenuItem("Cartridge Info", NULL, &m_ShowCartridge);
+        if (ImGui::BeginMenu("Cartridge")) {
+          ImGui::MenuItem("Cartridge Info", NULL, &m_ShowCartridge);
+          ImGui::MenuItem("Cartridge Runtime", NULL, &m_ShowCartridgeRuntime);
+          ImGui::EndMenu();
+        }
+
         ImGui::Separator();
         ImGui::MenuItem("ImGui Demo", NULL, &m_ShowDemo);
         ImGui::EndMenu();
@@ -148,59 +155,70 @@ namespace hijo {
     auto &cpu = gb->m_Cpu;
     auto &regs = cpu.regs;
 
-    if (m_ShowRom) {
-      static MemoryEditor romViewer;
+    // Display Windows
+    {
+      if (m_ShowRom) {
+        static MemoryEditor romViewer;
 
-      romViewer.HighlightMin = regs.pc;
-      romViewer.HighlightMax = regs.pc;
 
-      if (gb->m_Cartridge)
-        romViewer.DrawWindow("ROM", &gb->m_Cartridge->Data(), 32 * 1024);
+        if (gb->m_Cartridge) {
+
+          romViewer.DrawWindow("ROM", &gb->m_Cartridge->Data(), 32 * 1024);
+        }
+      }
+
+      if (m_ShowWorkRam) {
+        static MemoryEditor wramEditor;
+
+        wramEditor.DrawWindow("WRAM", &gb->m_WorkRam, 8 * 1024, 0xC000);
+      }
+
+      if (m_ShowHighRam) {
+        static MemoryEditor hramEditor;
+
+        hramEditor.DrawWindow("HRAM", &gb->m_HighRam, 127, 0xFF80);
+      }
+
+      if (m_ShowVRAM) {
+        static MemoryEditor vramEditor;
+
+        vramEditor.DrawWindow("VRAM", &gb->m_PPU.m_VideoRam, 8 * 1024, 0x8000);
+      }
+
+      if (m_ShowDisassembly) {
+        Disassembly();
+      }
+
+      if (m_ShowRegisters) {
+        Registers();
+      }
+
+      if (m_ShowDemo) {
+        ImGui::ShowDemoWindow(&m_ShowDemo);
+      }
+
+      if (m_ShowTiles) {
+        Tiles();
+      }
+
+      if (m_ShowOAM) {
+        OAM();
+      }
+
+      if (m_ShowCartridge) {
+        CartridgeInfo();
+      }
+
+      if (m_ShowCartridgeRuntime) {
+        CartridgeRuntime();
+      }
+
+      if (m_ShowPPU) {
+        PPU();
+      }
+
+      Viewport();
     }
-
-    if (m_ShowWorkRam) {
-      static MemoryEditor wramEditor;
-
-      wramEditor.DrawWindow("WRAM", &gb->m_WorkRam, 8 * 1024, 0xC000);
-    }
-
-    if (m_ShowHighRam) {
-      static MemoryEditor hramEditor;
-
-      hramEditor.DrawWindow("HRAM", &gb->m_HighRam, 127, 0xFF80);
-    }
-
-    if (m_ShowVRAM) {
-      static MemoryEditor vramEditor;
-
-      vramEditor.DrawWindow("VRAM", &gb->m_PPU.m_VideoRam, 8 * 1024, 0x8000);
-    }
-
-    if (m_ShowDisassembly) {
-      Disassembly();
-    }
-
-    if (m_ShowRegisters) {
-      Registers();
-    }
-
-    if (m_ShowDemo) {
-      ImGui::ShowDemoWindow(&m_ShowDemo);
-    }
-
-    if (m_ShowTiles) {
-      Tiles();
-    }
-
-    if (m_ShowOAM) {
-      OAM();
-    }
-
-    if (m_ShowCartridge) {
-      CartridgeInfo();
-    }
-
-    Viewport();
 
     ImGui::End();
   }
@@ -252,7 +270,6 @@ namespace hijo {
    * Windows
    */
 
-
   void UI::Tiles() {
     if (!ImGui::Begin("Tiles", &m_ShowTiles)) {
       ImGui::End();
@@ -267,9 +284,6 @@ namespace hijo {
   }
 
   void UI::Viewport() {
-    static bool firstRun = true;
-    static bool second = true;
-
     ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
     ImGui::SetNextWindowDockID(dockspace_id, ImGuiCond_FirstUseEver);
 
@@ -313,13 +327,10 @@ namespace hijo {
         EventManager::Dispatcher().trigger<Events::UIMouseMove>({position.x, position.y});
       }
 
-      if (firstRun || second || windowWidth != m_PrevScreenWidth || windowHeight != m_PrevScreenHeight) {
+      if (windowWidth != m_PrevScreenWidth || windowHeight != m_PrevScreenHeight) {
         m_PreviousWindowSize = size;
         m_PrevScreenWidth = windowWidth;
         m_PrevScreenHeight = windowHeight;
-
-        firstRun = false;
-        second = false;
 
         EventManager::Dispatcher().trigger<Events::ViewportResized>({size.x, size.y});
       } else {
@@ -671,7 +682,6 @@ namespace hijo {
         ImGui::Text("No cartridge loaded!");
       } else {
         const auto &header = cartridge->Header();
-        const auto &statLines = cartridge->m_Mapper->GetStats();
 
         ImGui::BeginTable("cinfo", 2, ImGuiTableFlags_RowBg);
         ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
@@ -797,23 +807,365 @@ namespace hijo {
         ImGui::Text("0x%02X [%s]", header.headerChecksum, header.headerChecksumPassed ? "Passed" : "Failed");
 
         ImGui::EndTable();
+      }
+      ImGui::End();
+    }
+  }
 
-        ImGui::Separator();
+  void UI::CartridgeRuntime() {
+    auto &bus = Gameboy::Get();
+    auto cartridge = bus.m_Cartridge;
+    const auto &statLines = cartridge->m_Mapper->GetStats();
 
-        ImGui::BeginTable("cinfo5", 2, ImGuiTableFlags_RowBg);
-        ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
-        ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+    if (!ImGui::Begin("Cart. Runtime", &m_ShowCartridgeRuntime)) {
+      ImGui::End();
+    } else {
+      ImGui::BeginTable("cinfo5", 2, ImGuiTableFlags_RowBg);
+      ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+      ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
 
-        for (const auto &line: statLines) {
+      for (const auto &line: statLines) {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("%s", line.label.c_str());
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%s", line.data.c_str());
+      }
+
+      ImGui::EndTable();
+
+      ImGui::End();
+    }
+  }
+
+  void UI::PPU() {
+    auto &bus = Gameboy::Get();
+    auto &ppu = bus.m_PPU;
+    auto &lcd = LCD::Get();
+
+    auto lcdMode = [](LCD::Mode mode) {
+      switch (mode) {
+        case LCD::Mode::HBlank:
+          return "HBlank";
+        case LCD::Mode::VBlank:
+          return "VBlank";
+        case LCD::Mode::OAM:
+          return "OAM";
+        case LCD::Mode::XFER:
+          return "XFER";
+      }
+    };
+
+    auto stateToString = [](class PPU &ppu) {
+      switch (ppu.fifo.state) {
+        case PPU::FetchState::Tile:
+          return "Tile";
+        case PPU::FetchState::Data0:
+          return "Data0";
+        case PPU::FetchState::Data1:
+          return "Data1";
+        case PPU::FetchState::Idle:
+          return "Idle";
+        case PPU::FetchState::Push:
+          return "Push";
+      }
+    };
+
+    if (!ImGui::Begin("PPU", &m_ShowPPU)) {
+      ImGui::End();
+    } else {
+      if (ImGui::BeginTabBar("ptab", ImGuiTabBarFlags_None)) {
+        if (ImGui::BeginTabItem("LCD")) {
+          ImGui::TextUnformatted(fmt::format("LCD Control {:04b} {:04b}",
+                                             (lcd.regs.LCDC & 0xF0) >> 4,
+                                             lcd.regs.LCDC & 0xF).c_str());
+
+          bool LCDC_Enable = BIT(lcd.regs.LCDC, 7);
+          bool LCDC_WinMapArea = BIT(lcd.regs.LCDC, 6);
+          bool LCDC_WindowEnable = BIT(lcd.regs.LCDC, 5);
+          bool LCDC_TileDataArea = BIT(lcd.regs.LCDC, 4);
+          bool LCDC_BGMapArea = BIT(lcd.regs.LCDC, 3);
+          bool LCDC_ObjSize = BIT(lcd.regs.LCDC, 2);
+          bool LCDC_ObjEnable = BIT(lcd.regs.LCDC, 1);
+          bool LCDC_BGWinEnable = BIT(lcd.regs.LCDC, 0);
+
+          auto tooltip = [](const char *tip) {
+            if (ImGui::IsItemHovered()) {
+              ImGui::BeginTooltip();
+              ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+              ImGui::TextUnformatted(tip);
+              ImGui::PopTextWrapPos();
+              ImGui::EndTooltip();
+            }
+          };
+
+          ImGui::BeginGroup();
+          ImGui::Checkbox("E", &LCDC_Enable);
+          tooltip("LCD Enabled");
+          ImGui::SameLine();
+          ImGui::Checkbox("WMA", &LCDC_WinMapArea);
+          tooltip("Window Map Area");
+          ImGui::SameLine();
+          ImGui::Checkbox("WE", &LCDC_WindowEnable);
+          tooltip("Window Enabled");
+          ImGui::SameLine();
+          ImGui::Checkbox("TDA", &LCDC_TileDataArea);
+          tooltip("Tile Data Area");
+          ImGui::SameLine();
+          ImGui::Checkbox("BGMA", &LCDC_BGMapArea);
+          tooltip("Background Map Area");
+          ImGui::SameLine();
+          ImGui::Checkbox("OS", &LCDC_ObjSize);
+          tooltip("Object Size");
+          ImGui::SameLine();
+          ImGui::Checkbox("OE", &LCDC_ObjEnable);
+          tooltip("Object Enabled");
+          ImGui::SameLine();
+          ImGui::Checkbox("BGWE", &LCDC_BGWinEnable);
+          tooltip("Background/Window Enabled");
+          ImGui::EndGroup();
+
+          ImGui::Separator();
+
+          ImGui::BeginTable("linfo", 2, ImGuiTableFlags_RowBg);
+          ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+          ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+
           ImGui::TableNextRow();
           ImGui::TableSetColumnIndex(0);
-          ImGui::Text("%s", line.label.c_str());
+          ImGui::Text("Window Tilemap Area");
           ImGui::TableSetColumnIndex(1);
-          ImGui::Text("%s", line.data.c_str());
+          ImGui::Text("%s", LCDC_WinMapArea ? "$9C00" : "$9800");
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("BG/Window Tile Data Area");
+          ImGui::TableSetColumnIndex(1);
+          ImGui::Text("%s", LCDC_WinMapArea ? "$8000" : "$8800");
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("Object Size");
+          ImGui::TableSetColumnIndex(1);
+          ImGui::Text("%s", LCDC_ObjSize ? "8x16" : "8x8");
+
+          ImGui::EndTable();
+
+          ImGui::Separator();
+
+          ImGui::TextUnformatted(fmt::format("LCD Status {:04b} {:04b}",
+                                             (lcd.regs.LCDS & 0xF0) >> 4,
+                                             lcd.regs.LCDS & 0xF).c_str());
+
+          bool LCDS_IS_LYCLY = BIT(lcd.regs.LCDS, 6);
+          bool LCDS_IS_Mode2_OAM = BIT(lcd.regs.LCDS, 5);
+          bool LCDS_IS_Mode1_VBlank = BIT(lcd.regs.LCDS, 4);
+          bool LCDS_IS_Mode0_HBlank = BIT(lcd.regs.LCDS, 3);
+          bool LCDS_LYCisLY = BIT(lcd.regs.LCDS, 2);
+
+          ImGui::BeginGroup();
+          ImGui::Checkbox("LYC", &LCDS_IS_LYCLY);
+          tooltip("LYC = LY STAT Interrupt Source");
+          ImGui::SameLine();
+          ImGui::Checkbox("M2OAM", &LCDS_IS_Mode2_OAM);
+          tooltip("Mode 2 OAM Stat Interrupt Source");
+          ImGui::SameLine();
+          ImGui::Checkbox("M1VB", &LCDS_IS_Mode1_VBlank);
+          tooltip("Mode 1 VBlank Stat Interrupt Source");
+          ImGui::SameLine();
+          ImGui::Checkbox("M0HB", &LCDS_IS_Mode0_HBlank);
+          tooltip("Mode 0 HBlank Stat Interrupt Source");
+          ImGui::SameLine();
+          ImGui::Checkbox("LY=LYC", &LCDS_IS_Mode0_HBlank);
+          tooltip("LY Equals LYC");
+          ImGui::EndGroup();
+
+          ImGui::Separator();
+
+          ImGui::BeginTable("pinfo", 2, ImGuiTableFlags_RowBg);
+          ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+          ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("Mode");
+          ImGui::TableSetColumnIndex(1);
+          ImGui::Text("%s", lcdMode(lcd.LCDS_Mode()));
+
+          ImGui::EndTable();
+
+          ImGui::Separator();
+          ImGui::Text("Scroll");
+
+          ImGui::BeginTable("pinfo2", 2, ImGuiTableFlags_RowBg);
+          ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+          ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("X: %d", lcd.regs.SCRX);
+          ImGui::TableSetColumnIndex(1);
+          ImGui::Text("Y: %d", lcd.regs.SCRY);
+
+          ImGui::EndTable();
+
+          ImGui::Separator();
+          ImGui::Text("Window");
+
+          ImGui::BeginTable("pinfo3", 2, ImGuiTableFlags_RowBg);
+          ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+          ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("X: %d", lcd.regs.WINX);
+          ImGui::TableSetColumnIndex(1);
+          ImGui::Text("Y: %d", lcd.regs.WINY);
+
+          ImGui::EndTable();
+
+          ImGui::Separator();
+          ImGui::Text("Line");
+
+          ImGui::BeginTable("pinfo4", 2, ImGuiTableFlags_RowBg);
+          ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+          ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("LY");
+          ImGui::TableSetColumnIndex(1);
+          ImGui::Text("%d", lcd.regs.LY);
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("LY Compare");
+          ImGui::TableSetColumnIndex(1);
+          ImGui::Text("%d", lcd.regs.LYCP);
+
+          ImGui::EndTable();
+
+          ImGui::Separator();
+          ImGui::Text("Palettes");
+
+          ImGui::BeginTable("pinfo5", 2, ImGuiTableFlags_RowBg);
+          ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+          ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("BG Palette");
+          ImGui::TableSetColumnIndex(1);
+
+          float sz = ImGui::GetTextLineHeight();
+          ImVec2 p = ImGui::GetCursorScreenPos();
+
+          for (auto i = 1; i <= 4; i++) {
+            ImGui::GetWindowDrawList()->AddRectFilled(p,
+                                                      ImVec2(p.x + sz, p.y + sz),
+                                                      IM_COL32(
+                                                          lcd.regs.bgColors[i - 1].r,
+                                                          lcd.regs.bgColors[i - 1].g,
+                                                          lcd.regs.bgColors[i - 1].b,
+                                                          lcd.regs.bgColors[i - 1].a
+                                                      ));
+
+            p.x += sz + 4.0f;
+          }
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("OBJ Palette 0");
+          ImGui::TableSetColumnIndex(1);
+
+          sz = ImGui::GetTextLineHeight();
+          p = ImGui::GetCursorScreenPos();
+
+          for (auto i = 1; i <= 4; i++) {
+            ImGui::GetWindowDrawList()->AddRectFilled(p,
+                                                      ImVec2(p.x + sz, p.y + sz),
+                                                      IM_COL32(
+                                                          lcd.regs.sp1Colors[i - 1].r,
+                                                          lcd.regs.sp1Colors[i - 1].g,
+                                                          lcd.regs.sp1Colors[i - 1].b,
+                                                          lcd.regs.sp1Colors[i - 1].a
+                                                      ));
+
+            p.x += sz + 4.0f;
+          }
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("OBJ Palette 1");
+          ImGui::TableSetColumnIndex(1);
+          sz = ImGui::GetTextLineHeight();
+          p = ImGui::GetCursorScreenPos();
+
+          for (auto i = 1; i <= 4; i++) {
+            ImGui::GetWindowDrawList()->AddRectFilled(p,
+                                                      ImVec2(p.x + sz, p.y + sz),
+                                                      IM_COL32(
+                                                          lcd.regs.sp2Colors[i - 1].r,
+                                                          lcd.regs.sp2Colors[i - 1].g,
+                                                          lcd.regs.sp2Colors[i - 1].b,
+                                                          lcd.regs.sp2Colors[i - 1].a
+                                                      ));
+
+            p.x += sz + 4.0f;
+          }
+
+          ImGui::EndTable();
+
+          ImGui::EndTabItem();
         }
 
-        ImGui::EndTable();
+        if (ImGui::BeginTabItem("State")) {
+
+          ImGui::BeginTable("ppu1", 2, ImGuiTableFlags_RowBg);
+          ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+          ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("Line Ticks");
+          ImGui::TableSetColumnIndex(1);
+          ImGui::Text("%d", ppu.lineTicks);
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("Current Frame");
+          ImGui::TableSetColumnIndex(1);
+          ImGui::Text("%d", ppu.currentFrame);
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("Window Line");
+          ImGui::TableSetColumnIndex(1);
+          ImGui::Text("%d", ppu.windowLine);
+
+          ImGui::EndTable();
+
+          ImGui::Separator();
+
+          ImGui::BeginTable("ppu2", 2, ImGuiTableFlags_RowBg);
+          ImGui::TableSetupColumn("label", ImGuiTableFlags_None);
+          ImGui::TableSetupColumn("value", ImGuiTableFlags_None);
+
+          ImGui::TableNextRow();
+          ImGui::TableSetColumnIndex(0);
+          ImGui::Text("Line Sprite Count");
+          ImGui::TableSetColumnIndex(1);
+          ImGui::Text("%d", ppu.lineSpriteCount);
+
+
+          ImGui::EndTable();
+
+          ImGui::EndTabItem();
+        }
+
+        ImGui::EndTabBar();
       }
+
       ImGui::End();
     }
   }

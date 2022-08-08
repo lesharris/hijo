@@ -65,13 +65,13 @@ namespace hijo {
 
     uint8_t LCDC_ObjHeight();
 
-    uint16_t LCDC_BGMapArea();
+    uint16_t LCDC_BGTilemapArea();
 
-    uint16_t LCDC_BGWDataArea();
+    uint16_t LCDC_BGWTileDataArea();
 
     bool LCDC_WinEnable();
 
-    uint16_t LCDC_WinMapArea();
+    uint16_t LCDC_WindowTilemapArea();
 
     bool LCDC_Enabled();
 
@@ -92,6 +92,11 @@ namespace hijo {
 
   private:
     void PaletteUpdate(uint8_t data, uint8_t palette);
+
+  private:
+    friend class UI;
+
+    friend class Gameboy;
 
   private:
     Registers regs;

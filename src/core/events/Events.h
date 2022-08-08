@@ -124,4 +124,12 @@ namespace hijo::Events {
     uint16_t addr;
   };
 
+  struct VBlank : public Event {
+    VBlank() : Event() {}
+  };
+
+  struct HandleAudio : public Event {
+    HandleAudio() : Event() {}
+  };
+
 }

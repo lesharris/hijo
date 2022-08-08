@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <vector>
+#include <deque>
 
 #include "System.h"
 #include "core/events/EventManager.h"
@@ -12,6 +13,9 @@
 #include "cartridge/Cartridge.h"
 #include "display/PPU.h"
 #include "input/Controller.h"
+#include "sound/audio/Gb_Apu.h"
+#include "sound/audio/Multi_Buffer.h"
+#include "sound/Sound_Queue.h"
 
 namespace hijo {
 
@@ -49,7 +53,7 @@ namespace hijo {
     }
 
     uint64_t Cycles() const {
-      return m_CycleCount;
+      return m_TCycleCount;
     }
 
     std::vector<Color> &VideoBuffer() {
@@ -80,9 +84,13 @@ namespace hijo {
 
     friend class SharpSM83;
 
+    friend class Controller;
+
   private:
     bool m_Run = false;
-    uint64_t m_CycleCount = 0;
+
+    uint32_t m_TCycleCount = 0;
+    uint32_t m_MCycleCount = 0;
 
     uint8_t m_ExtRam[1024 * 8];
     uint8_t m_WorkRam[1024 * 8];
@@ -103,7 +111,17 @@ namespace hijo {
 
     std::string m_Buffer;
 
-    uint16_t m_CyclesTaken = 0;
+    static constexpr unsigned SAMPLERATE = 48000;
+    static constexpr double CYCLES_PER_SAMPLE = 4194304.0 / SAMPLERATE; // 87.38133333
+    static constexpr double CYCLES_PER_FRAME = 4194304.0 / 59.7;  // 70256.34840871
+    static constexpr size_t SamplesPerFrame = (CYCLES_PER_FRAME / CYCLES_PER_SAMPLE) + 1; // 805
+
+    Sound_Queue m_SoundQueue;
+    Gb_Apu m_APU{};
+    Stereo_Buffer m_StereoBuffer{};
+    blip_sample_t m_SampleBuffer[4096];
+    Sound_Queue::sample_t m_AudioBuffer[4096];
+    uint32_t m_SampleCount = 0;
   };
 
 } // hijo

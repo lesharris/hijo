@@ -4,6 +4,8 @@
 
 #include "common/common.h"
 
+#include "display/LCD.h"
+
 namespace hijo {
   void Emu::OnAttach() {
     // m_GB.InsertCartridge("boilerplate.gb");
@@ -59,7 +61,7 @@ namespace hijo {
     //m_GB.InsertCartridge("mts/acceptance/push_timing.gb");
     // m_GB.InsertCartridge("mts/acceptance/pop_timing.gb");//PASSED
 
-    // m_GB.InsertCartridge("01-special.gb"); // PASSED
+    //m_GB.InsertCartridge("01-special.gb"); // PASSED
     //m_GB.InsertCartridge("02-interrupts.gb"); // PASSED
     //m_GB.InsertCartridge("03-op sp,hl.gb"); // PASSED
     //m_GB.InsertCartridge("04-op r,imm.gb"); // PASSED
@@ -73,6 +75,7 @@ namespace hijo {
 
     //m_GB.InsertCartridge("cpu_instrs.gb"); // PASSED
 
+    m_GB.InsertCartridge("finalfantasyadventure.gb");
     //m_GB.InsertCartridge("linksawakening.gb");
     //m_GB.InsertCartridge("kirbysdreamland.gb");
     //m_GB.InsertCartridge("supermarioland2.gb");
@@ -109,11 +112,15 @@ namespace hijo {
 
     auto scale = scw / bufferWidth;
 
-    for (auto y = 0; y < bufferHeight; y++) {
-      for (auto x = 0; x < bufferWidth; x++) {
-        DrawRectangle(x * scale, y * scale,
-                      scale, scale,
-                      buffer[(y * bufferWidth) + x]);
+    auto &lcd = LCD::Get();
+
+    if (lcd.LCDC_Enabled()) {
+      for (auto y = 0; y < bufferHeight; y++) {
+        for (auto x = 0; x < bufferWidth; x++) {
+          DrawRectangle(x * scale, y * scale,
+                        scale, scale,
+                        buffer[(y * bufferWidth) + x]);
+        }
       }
     }
   }

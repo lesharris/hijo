@@ -20,11 +20,11 @@ namespace hijo {
     return BIT(regs.LCDC, 2) ? 16 : 8;
   }
 
-  uint16_t LCD::LCDC_BGMapArea() {
+  uint16_t LCD::LCDC_BGTilemapArea() {
     return BIT(regs.LCDC, 3) ? 0x9C00 : 0x9800;
   }
 
-  uint16_t LCD::LCDC_BGWDataArea() {
+  uint16_t LCD::LCDC_BGWTileDataArea() {
     return BIT(regs.LCDC, 4) ? 0x8000 : 0x8800;
   }
 
@@ -32,7 +32,7 @@ namespace hijo {
     return BIT(regs.LCDC, 5);
   }
 
-  uint16_t LCD::LCDC_WinMapArea() {
+  uint16_t LCD::LCDC_WindowTilemapArea() {
     return BIT(regs.LCDC, 6) ? 0x9C00 : 0x9800;
   }
 

@@ -8,6 +8,7 @@
     "zlib",
     "spdlog",
     "entt",
-    "catch2"
+    "catch2",
+    "sdl2"
   ]
 }

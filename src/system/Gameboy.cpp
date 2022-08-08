@@ -4,6 +4,8 @@
 
 #include "display/LCD.h"
 
+#include <raylib.h>
+
 namespace hijo {
 
   Gameboy::Gameboy() {
@@ -17,6 +19,19 @@ namespace hijo {
     memset(m_Serial, 0, 2);
 
     m_Timer.div = 0xABCC;
+
+    memset(m_SampleBuffer, 0, sizeof(m_SampleBuffer));
+
+    // m_APU.reduce_clicks(true);
+    m_StereoBuffer.clock_rate(4194304);
+    m_StereoBuffer.set_sample_rate(SAMPLERATE);
+
+    m_APU.reset(Gb_Apu::mode_dmg);
+    m_APU.set_output(m_StereoBuffer.center(),
+                     m_StereoBuffer.left(),
+                     m_StereoBuffer.right());
+
+    m_SoundQueue.start(SAMPLERATE, 2);
 
     EventManager::Get().Attach<
         Events::ExecuteCPU,
@@ -35,6 +50,7 @@ namespace hijo {
   }
 
   Gameboy::~Gameboy() {
+    m_SoundQueue.stop();
     EventManager::Get().DetachAll(this);
   }
 
@@ -97,7 +113,7 @@ namespace hijo {
       }
 
       if (BETWEEN(addr, 0xFF10, 0xFF3F)) {
-        //ignore sound
+        m_APU.write_register(m_TCycleCount, addr, data);
         return;
       }
 
@@ -131,7 +147,6 @@ namespace hijo {
         return;
       }
 
-      spdlog::get("console")->info("UNSUPPORTED bus_write({:04X})", addr);
     } else if (addr == 0xFFFF) {
       //CPU SET ENABLE REGISTER
 
@@ -189,8 +204,7 @@ namespace hijo {
       }
 
       if (BETWEEN(addr, 0xFF10, 0xFF3F)) {
-        //ignore sound
-        return 0;
+        return m_APU.read_register(m_TCycleCount, addr);
       }
 
       if (BETWEEN(addr, 0xFF40, 0xFF4B)) {
@@ -222,14 +236,11 @@ namespace hijo {
         return 0;
       }
 
-      spdlog::get("console")->info("UNSUPPORTED bus_read({:04X})\n", addr);
       return 0;
     } else if (addr == 0xFFFF) {
-      //CPU ENABLE REGISTER...
       return m_Cpu.IERegister();
     }
 
-    //NO_IMPL
     return m_HighRam[addr & 0x7F];
   }
 
@@ -239,7 +250,8 @@ namespace hijo {
     // 70224 tcycles per frame
     // 17556 mcycles per frame
 
-    m_CyclesTaken = 0;
+    m_TCycleCount = 0;
+    m_MCycleCount = 0;
 
     if (m_Run) {
       do {
@@ -250,7 +262,22 @@ namespace hijo {
         }
 
         m_Cpu.Step();
-      } while (m_CyclesTaken <= 17556);
+      } while (m_MCycleCount <= 17556);
+
+      m_APU.end_frame(m_TCycleCount);
+      m_StereoBuffer.end_frame(m_TCycleCount);
+
+      auto availSamples = m_StereoBuffer.samples_avail();
+
+      if (availSamples > 0) {
+        m_SampleCount = m_StereoBuffer.read_samples(m_SampleBuffer, availSamples);
+
+        for (auto i = 0u; i < m_SampleCount; i++) {
+          m_AudioBuffer[i] = m_SampleBuffer[i];
+        }
+
+        m_SoundQueue.write(m_AudioBuffer, m_SampleCount);
+      }
     }
   }
 
@@ -273,11 +300,11 @@ namespace hijo {
   }
 
   void Gameboy::Cycles(uint32_t cycles) {
-    m_CyclesTaken += cycles;
+    m_MCycleCount += cycles;
 
     for (uint32_t i = 0; i < cycles; i++) {
       for (auto n = 0; n < 4; n++) {
-        m_CycleCount++;
+        m_TCycleCount++;
         m_Timer.Tick();
         m_PPU.Tick();
       }

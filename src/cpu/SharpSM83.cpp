@@ -205,17 +205,17 @@ namespace hijo {
 
       case AddressMode::R_D8:
         m_FetchedData = bus.cpuRead(regs.pc);
-        bus.Cycles(1);
+        Cycle(1);
         regs.pc++;
         return;
 
       case AddressMode::R_D16:
       case AddressMode::D16: {
         uint16_t lo = bus.cpuRead(regs.pc);
-        bus.Cycles(1);
+        Cycle(1);
 
         uint16_t hi = bus.cpuRead(regs.pc + 1);
-        bus.Cycles(1);
+        Cycle(1);
 
         m_FetchedData = lo | (hi << 8);
 
@@ -243,7 +243,7 @@ namespace hijo {
         }
 
         m_FetchedData = bus.cpuRead(addr);
-        bus.Cycles(1);
+        Cycle(1);
 
       }
         return;
@@ -251,13 +251,13 @@ namespace hijo {
       case AddressMode::R_HLI:
         m_FetchedData = bus.cpuRead(Reg(m_CurrentInstruction->reg2));
         Reg(Register::HL, Reg(Register::HL) + 1);
-        bus.Cycles(1);
+        Cycle(1);
         return;
 
       case AddressMode::R_HLD:
         m_FetchedData = bus.cpuRead(Reg(m_CurrentInstruction->reg2));
         Reg(Register::HL, Reg(Register::HL) - 1);
-        bus.Cycles(1);
+        Cycle(1);
         return;
 
       case AddressMode::HLI_R:
@@ -277,35 +277,35 @@ namespace hijo {
       case AddressMode::R_A8:
         m_FetchedData = bus.cpuRead(regs.pc);
         regs.pc++;
-        bus.Cycles(1);
+        Cycle(1);
         return;
 
       case AddressMode::A8_R:
         m_MemoryDestination = bus.cpuRead(regs.pc) | 0xFF00;
         DestinationIsMemory = true;
         regs.pc++;
-        bus.Cycles(1);
+        Cycle(1);
         return;
 
       case AddressMode::HL_SPR:
         m_FetchedData = bus.cpuRead(regs.pc);
         regs.pc++;
-        bus.Cycles(1);
+        Cycle(1);
         return;
 
       case AddressMode::D8:
         m_FetchedData = bus.cpuRead(regs.pc);
         regs.pc++;
-        bus.Cycles(1);
+        Cycle(1);
         return;
 
       case AddressMode::A16_R:
       case AddressMode::D16_R: {
         uint16_t lo = bus.cpuRead(regs.pc);
-        bus.Cycles(1);
+        Cycle(1);
 
         uint16_t hi = bus.cpuRead(regs.pc + 1);
-        bus.Cycles(1);
+        Cycle(1);
 
         m_MemoryDestination = lo | (hi << 8);
         DestinationIsMemory = true;
@@ -320,7 +320,7 @@ namespace hijo {
         m_FetchedData = bus.cpuRead(regs.pc);
         m_MemoryDestination = Reg(m_CurrentInstruction->reg1);
         DestinationIsMemory = true;
-        bus.Cycles(1);
+        Cycle(1);
         regs.pc++;
         return;
 
@@ -328,21 +328,21 @@ namespace hijo {
         m_MemoryDestination = Reg(m_CurrentInstruction->reg1);
         DestinationIsMemory = true;
         m_FetchedData = bus.cpuRead(Reg(m_CurrentInstruction->reg1));
-        bus.Cycles(1);
+        Cycle(1);
         return;
 
       case AddressMode::R_A16: {
         uint16_t lo = bus.cpuRead(regs.pc);
-        bus.Cycles(1);
+        Cycle(1);
 
         uint16_t hi = bus.cpuRead(regs.pc + 1);
-        bus.Cycles(1);
+        Cycle(1);
 
         uint16_t addr = lo | (hi << 8);
 
         regs.pc += 2;
         m_FetchedData = bus.cpuRead(addr);
-        bus.Cycles(1);
+        Cycle(1);
 
         return;
       }
@@ -358,7 +358,7 @@ namespace hijo {
 
     m_CurrentOpcode = bus.cpuRead(regs.pc++);
     m_CurrentInstruction = &instrs.OpcodeByByte(m_CurrentOpcode);
-    bus.Cycles(1);
+    Cycle(1);
   }
 
   void SharpSM83::Execute() {
@@ -373,10 +373,14 @@ namespace hijo {
   }
 
   bool SharpSM83::Step() {
+    m_CurrentCycles = 0;
+
     auto &bus = Gameboy::Get();
 
     if (!m_Halted) {
       FetchInstruction();
+      m_CurrentCycles++;
+
       FetchData();
 
       if (m_CurrentInstruction == nullptr) {
@@ -386,7 +390,7 @@ namespace hijo {
 
       Execute();
     } else {
-      bus.Cycles(1);
+      Cycle(1);
 
       if (m_IF) {
         m_Halted = false;
@@ -460,7 +464,7 @@ namespace hijo {
 
     if (CheckCondition()) {
       if (pushPC) {
-        bus.Cycles(2);
+        Cycle(2);
         Stack::Push16(regs.pc);
       }
 
@@ -469,7 +473,7 @@ namespace hijo {
        }*/
 
       regs.pc = addr;
-      bus.Cycles(1);
+      Cycle(1);
     }
   }
 
@@ -490,10 +494,10 @@ namespace hijo {
     uint8_t bit_op = (op >> 6) & 0b11;
     uint8_t reg_val = Reg8(reg);
 
-    bus.Cycles(1);
+    Cycle(1);
 
     if (reg == Register::HL) {
-      bus.Cycles(2);
+      Cycle(2);
     }
 
     switch (bit_op) {
@@ -712,13 +716,13 @@ namespace hijo {
     auto &bus = Gameboy::Get();
     if (DestinationIsMemory) {
       if (Is16Bit(m_CurrentInstruction->reg2)) {
-        bus.Cycles(1);
+        Cycle(1);
         bus.cpuWrite16(m_MemoryDestination, m_FetchedData);
       } else {
         bus.cpuWrite(m_MemoryDestination, m_FetchedData);
       }
 
-      bus.Cycles(1);
+      Cycle(1);
 
       return;
     }
@@ -748,7 +752,7 @@ namespace hijo {
       bus.cpuWrite(m_MemoryDestination, regs.a);
     }
 
-    bus.Cycles(1);
+    Cycle(1);
   }
 
   void SharpSM83::ProcJP() {
@@ -772,19 +776,19 @@ namespace hijo {
   void SharpSM83::ProcRET() {
     auto &bus = Gameboy::Get();
     if (m_CurrentInstruction->cond != Condition::NONE) {
-      bus.Cycles(1);
+      Cycle(1);
     }
 
     if (CheckCondition()) {
       uint16_t lo = Stack::Pop();
-      bus.Cycles(1);
+      Cycle(1);
       uint16_t hi = Stack::Pop();
-      bus.Cycles(1);
+      Cycle(1);
 
       uint16_t n = (hi << 8) | lo;
       regs.pc = n;
 
-      bus.Cycles(1);
+      Cycle(1);
     }
   }
 
@@ -797,9 +801,9 @@ namespace hijo {
     auto &bus = Gameboy::Get();
 
     uint16_t lo = Stack::Pop();
-    bus.Cycles(1);
+    Cycle(1);
     uint16_t hi = Stack::Pop();
-    bus.Cycles(1);
+    Cycle(1);
 
     uint16_t n = (hi << 8) | lo;
 
@@ -814,14 +818,14 @@ namespace hijo {
     auto &bus = Gameboy::Get();
 
     // Internal
-    bus.Cycles(1);
+    Cycle(1);
 
     uint16_t hi = (Reg(m_CurrentInstruction->reg1) >> 8) & 0xFF;
-    bus.Cycles(1);
+    Cycle(1);
     Stack::Push(hi);
 
     uint16_t lo = Reg(m_CurrentInstruction->reg1) & 0xFF;
-    bus.Cycles(1);
+    Cycle(1);
     Stack::Push(lo);
   }
 
@@ -831,7 +835,7 @@ namespace hijo {
     uint16_t val = Reg(m_CurrentInstruction->reg1) + 1;
 
     if (Is16Bit(m_CurrentInstruction->reg1)) {
-      bus.Cycles(1);
+      Cycle(1);
     }
 
     if (m_CurrentInstruction->reg1 == Register::HL && m_CurrentInstruction->mode == AddressMode::MR) {
@@ -839,7 +843,7 @@ namespace hijo {
       val++;
       val &= 0xFF;
       bus.cpuWrite(Reg(Register::HL), val);
-      bus.Cycles(1);
+      Cycle(1);
     } else {
       Reg(m_CurrentInstruction->reg1, val);
       val = Reg(m_CurrentInstruction->reg1);
@@ -858,7 +862,7 @@ namespace hijo {
     uint16_t val = Reg(m_CurrentInstruction->reg1) - 1;
 
     if (Is16Bit(m_CurrentInstruction->reg1)) {
-      bus.Cycles(1);
+      Cycle(1);
     }
 
     if (m_CurrentInstruction->reg1 == Register::HL && m_CurrentInstruction->mode == AddressMode::MR) {
@@ -866,7 +870,7 @@ namespace hijo {
       val--;
       val &= 0xFF;
       bus.cpuWrite(Reg(Register::HL), val);
-      bus.Cycles(1);
+      Cycle(1);
     } else {
       Reg(m_CurrentInstruction->reg1, val);
       val = Reg(m_CurrentInstruction->reg1);
@@ -922,7 +926,7 @@ namespace hijo {
     bool is_16bit = Is16Bit(m_CurrentInstruction->reg1);
 
     if (is_16bit) {
-      Gameboy::Get().Cycles(1);
+      Cycle(1);
     }
 
     if (m_CurrentInstruction->reg1 == Register::SP) {
@@ -1016,6 +1020,12 @@ namespace hijo {
 
       start_addr += op.length;
     }
+  }
+
+  void SharpSM83::Cycle(uint8_t cycles) {
+    auto &bus = Gameboy::Get();
+    m_CurrentCycles += cycles;
+    bus.Cycles(cycles);
   }
 
 } // hijo

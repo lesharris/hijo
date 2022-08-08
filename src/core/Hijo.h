@@ -35,6 +35,7 @@ namespace hijo {
 
     RenderTexture &GetPackedTileTexture() { return m_PackedTileTexture; }
 
+
     int32_t ScreenWidth() {
       return m_ScreenWidth;
     }
@@ -73,6 +74,8 @@ namespace hijo {
     void HandleMouseMove(const Events::UIMouseMove &event);
 
     void HandleWantQuit(const Events::WantQuit &event);
+
+    void HandleVBlank(const Events::VBlank &event);
 
   private:
     GameLayerStack *m_GameLayers = nullptr;

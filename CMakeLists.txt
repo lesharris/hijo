@@ -17,12 +17,12 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 set(CMAKE_CXX_STANDARD 20)
 
 # Dependencies
-find_package(raylib 4.0.0 QUIET)
+find_package(raylib 4.2.0 QUIET)
 if (NOT raylib_FOUND) # If there's none, fetch and build raylib
   include(FetchContent)
   FetchContent_Declare(
       raylib
-      URL https://github.com/raysan5/raylib/archive/refs/tags/4.0.0.tar.gz
+      URL https://github.com/raysan5/raylib/archive/refs/heads/master.zip
   )
   FetchContent_GetProperties(raylib)
   if (NOT raylib_POPULATED) # Have we downloaded raylib yet?
@@ -33,12 +33,28 @@ if (NOT raylib_FOUND) # If there's none, fetch and build raylib
   endif ()
 endif ()
 
+find_package(gbapu QUIET)
+if (NOT gbapu_FOUND)
+  include(FetchContent)
+  FetchContent_Declare(
+      gbapu
+      URL https://github.com/stoneface86/gbapu/archive/refs/heads/master.zip
+  )
+  FetchContent_GetProperties(gbapu)
+  if (NOT gbapu_POPULATED) # Have we downloaded raylib yet?
+    set(FETCHCONTENT_QUIET NO)
+    FetchContent_Populate(gbapu)
+    add_subdirectory(${gbapu_SOURCE_DIR} ${gbapu_BINARY_DIR})
+  endif ()
+endif ()
+
 find_path(STB_INCLUDE_DIRS "stb_c_lexer.h")
 
 find_package(fmt CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(EnTT CONFIG REQUIRED)
+find_package(SDL2 CONFIG REQUIRED)
 
 # Our App!
 add_executable(${PROJECT_NAME}
@@ -89,7 +105,34 @@ add_executable(${PROJECT_NAME}
     src/cpu/DMA.cpp
     src/cpu/DMA.h
     src/cpu/Stack.cpp
-    src/cpu/Stack.h src/input/Controller.cpp src/input/Controller.h src/sound/APU.cpp src/sound/APU.h src/cartridge/mappers/Mapper.h src/cartridge/mappers/ROM.cpp src/cartridge/mappers/ROM.h src/cartridge/mappers/MBC1.cpp src/cartridge/mappers/MBC1.h)
+    src/cpu/Stack.h
+    src/input/Controller.cpp
+    src/input/Controller.h
+    src/cartridge/mappers/Mapper.h
+    src/cartridge/mappers/ROM.cpp
+    src/cartridge/mappers/ROM.h
+    src/cartridge/mappers/MBC1.cpp
+    src/cartridge/mappers/MBC1.h
+    src/sound/audio/blargg_common.h
+    src/sound/audio/blargg_config.h
+    src/sound/audio/blargg_source.h
+    src/sound/audio/Blip_Buffer.cpp
+    src/sound/audio/Blip_Buffer.h
+    src/sound/audio/Blip_Synth.h
+    src/sound/audio/Effects_Buffer.cpp
+    src/sound/audio/Effects_Buffer.h
+    src/sound/audio/Gb_Apu.cpp
+    src/sound/audio/Gb_Apu.h
+    src/sound/audio/Gb_Apu_State.cpp
+    src/sound/audio/Gb_Oscs.cpp
+    src/sound/audio/Gb_Oscs.h
+    src/sound/audio/Multi_Buffer.cpp
+    src/sound/audio/Multi_Buffer.h
+    src/sound/audio/Basic_Gb_Apu.cpp
+    src/sound/audio/Basic_Gb_Apu.h
+    src/sound/Sound_Queue.cpp
+    src/sound/Sound_Queue.h
+    )
 
 # Compile Options
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
@@ -121,7 +164,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     raylib
     ZLIB::ZLIB
     spdlog::spdlog
-    EnTT::EnTT)
+    EnTT::EnTT
+    SDL2::SDL2-static)
 
 if (APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE "-framework IOKit")

@@ -5,6 +5,8 @@
 #include "cpu/Interrupts.h"
 #include <spdlog/spdlog.h>
 
+#include "core/events/EventManager.h"
+
 namespace hijo {
   PPU::PPU() {
     Init();
@@ -65,13 +67,6 @@ namespace hijo {
   void PPU::OAMWrite(uint16_t addr, uint8_t data) {
     if (addr >= 0xFE00)
       addr -= 0xFE00;
-
-    /*spdlog::get("console")->info("A: {:08X} AC: {} | E {} - F {}",
-                                 addr,
-                                 a,
-                                 a / 4,
-                                 a % 4);*/
-
 
     size_t index = addr / 4;
     uint8_t field = addr % 4;
@@ -305,10 +300,11 @@ namespace hijo {
       if (lcdRegs.LY >= winY && lcdRegs.LY < winY + m_XRes) {
         uint8_t w_tile_y = windowLine / 8;
 
-        fifo.bgwFetchData[0] = bus.cpuRead(
-            (lcd.LCDC_WinMapArea() + (fifo.fetchX + 7 - lcdRegs.WINX) / 8) + (w_tile_y * 32));
+        uint16_t addr = (lcd.LCDC_WindowTilemapArea() + (fifo.fetchX + 7 - lcdRegs.WINX) / 8) + (w_tile_y * 32);
 
-        if (lcd.LCDC_BGWDataArea() == 0x8800)
+        fifo.bgwFetchData[0] = bus.cpuRead(addr);
+
+        if (lcd.LCDC_BGWTileDataArea() == 0x8800)
           fifo.bgwFetchData[0] += 128;
       }
     }
@@ -323,9 +319,9 @@ namespace hijo {
         fetchedEntryCount = 0;
 
         if (lcd.LCDC_BGWEnabled()) {
-          fifo.bgwFetchData[0] = bus.cpuRead(lcd.LCDC_BGMapArea() + (fifo.mapX / 8) + ((fifo.mapY / 8) * 32));
+          fifo.bgwFetchData[0] = bus.cpuRead(lcd.LCDC_BGTilemapArea() + (fifo.mapX / 8) + ((fifo.mapY / 8) * 32));
 
-          if (lcd.LCDC_BGWDataArea() == 0x8800) {
+          if (lcd.LCDC_BGWTileDataArea() == 0x8800) {
             fifo.bgwFetchData[0] += 128;
           }
 
@@ -341,7 +337,7 @@ namespace hijo {
       }
         break;
       case FetchState::Data0: {
-        fifo.bgwFetchData[1] = bus.cpuRead(lcd.LCDC_BGWDataArea() + (fifo.bgwFetchData[0] * 16) + fifo.tileY);
+        fifo.bgwFetchData[1] = bus.cpuRead(lcd.LCDC_BGWTileDataArea() + (fifo.bgwFetchData[0] * 16) + fifo.tileY);
 
         PipelineLoadSpriteData(0);
 
@@ -349,7 +345,7 @@ namespace hijo {
       }
         break;
       case FetchState::Data1: {
-        fifo.bgwFetchData[2] = bus.cpuRead(lcd.LCDC_BGWDataArea() + (fifo.bgwFetchData[0] * 16) + fifo.tileY + 1);
+        fifo.bgwFetchData[2] = bus.cpuRead(lcd.LCDC_BGWTileDataArea() + (fifo.bgwFetchData[0] * 16) + fifo.tileY + 1);
 
         PipelineLoadSpriteData(1);
 
@@ -479,6 +475,8 @@ namespace hijo {
         lcd.LCDS_SetMode(LCD::Mode::OAM);
         lcdRegs.LY = 0;
         windowLine = 0;
+
+        EventManager::Dispatcher().trigger(Events::VBlank{});
       }
 
       lineTicks = 0;
