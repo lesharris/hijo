@@ -68,7 +68,7 @@ namespace hijo {
 
     void Write(uint16_t addr, uint8_t data);
 
-    void Tick();
+    void Tick(double timestep);
 
     const HeaderData &Header() const {
       return m_Header;

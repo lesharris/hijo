@@ -47,7 +47,7 @@ namespace hijo {
 
     virtual std::vector<StatLine> GetStats() = 0;
 
-    virtual void Tick() {}
+    virtual void Tick(double) {}
 
     void SetFeatures(bool ram, bool battery, bool timer, bool rumble) {
       m_HasRam = ram;

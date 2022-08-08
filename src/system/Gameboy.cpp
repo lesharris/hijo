@@ -244,7 +244,7 @@ namespace hijo {
     return m_HighRam[addr & 0x7F];
   }
 
-  void Gameboy::Update(double) {
+  void Gameboy::Update(double timestep) {
     // 154 Scanlines per Frame
     // 456 tcycles per scanline
     // 70224 tcycles per frame
@@ -254,6 +254,9 @@ namespace hijo {
     m_MCycleCount = 0;
 
     if (m_Run) {
+
+      m_Cartridge->Tick(timestep);
+      
       do {
         if (m_TargetActive && m_Cpu.regs.pc == m_TargetAddr) {
           m_TargetActive = false;
