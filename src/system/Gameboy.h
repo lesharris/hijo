@@ -112,6 +112,8 @@ namespace hijo {
     // Serial
     uint8_t m_Serial[2];
     bool m_SerialTransfer = false;
+    bool m_ControlSet = false;
+    uint8_t m_ControlCount = 0;
     std::string m_Buffer;
 
     // Things on the bus

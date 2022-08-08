@@ -4,6 +4,8 @@
 
 #include "display/LCD.h"
 
+#include "cpu/Interrupts.h"
+
 namespace hijo {
 
   Gameboy::Gameboy() {
@@ -82,6 +84,7 @@ namespace hijo {
 
       if (addr == 0xFF01) {
         m_Serial[0] = data;
+
         if (m_SerialTransfer)
           m_Buffer.push_back((char) m_Serial[0]);
         return;
@@ -96,6 +99,9 @@ namespace hijo {
           spdlog::get("console")->info("\n{}", m_Buffer);
           m_SerialTransfer = false;
         }
+
+        m_ControlSet = true;
+        m_ControlCount = false;
         return;
       }
 
@@ -260,6 +266,19 @@ namespace hijo {
         }
 
         m_Cpu.Step();
+
+        if (m_ControlSet) {
+          m_ControlCount++;
+
+          if (m_ControlCount >= 10) {
+            m_Serial[0] = 0xFF;
+            SetBit(m_Serial[1], 7, 0);
+            Interrupts::RequestInterrupt(m_Cpu, Interrupts::Interrupt::Serial);
+            m_ControlCount = 0;
+            m_ControlSet = false;
+          }
+        }
+
       } while (m_MCycleCount <= 17556);
 
       m_APU.end_frame(m_TCycleCount);
