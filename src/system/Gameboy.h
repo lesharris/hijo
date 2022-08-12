@@ -99,6 +99,8 @@ namespace hijo {
 
     friend class Controller;
 
+    friend class Display;
+
   private:
     bool m_Run = false;
 

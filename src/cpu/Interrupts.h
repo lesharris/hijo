@@ -26,9 +26,9 @@ namespace hijo {
     static void RequestInterrupt(SharpSM83 &cpu, const Interrupt &type);
 
     static void HandleInterrupts(SharpSM83 &cpu);
-    
+
   private:
-    static void HandleInterrupt(SharpSM83 &cpu, uint16_t addr);
+    static void HandleInterrupt(SharpSM83 &cpu, uint16_t addr, uint8_t it);
 
     static bool CheckInterrupt(SharpSM83 &cpu, uint16_t addr, const Interrupt &interrupt);
   };

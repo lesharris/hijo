@@ -131,7 +131,7 @@ namespace hijo {
         }
 
         ImGui::Separator();
-        
+
         if (ImGui::MenuItem("Unload ROM")) {
           EventManager::Dispatcher().trigger(Events::UnloadROM{});
         }
@@ -166,6 +166,7 @@ namespace hijo {
           ImGui::MenuItem("PPU", NULL, &m_ShowPPU);
           ImGui::MenuItem("Tile Viewer", NULL, &m_ShowTiles);
           ImGui::MenuItem("OAM Viewer", NULL, &m_ShowOAM);
+          ImGui::MenuItem("Tilemap 1 Viewer", NULL, &m_ShowTilemap1);
           ImGui::EndMenu();
         }
 
@@ -244,6 +245,10 @@ namespace hijo {
 
       if (m_ShowPPU) {
         PPU();
+      }
+
+      if (m_ShowTilemap1) {
+        Tilemap1();
       }
 
       Viewport();
@@ -1196,6 +1201,19 @@ namespace hijo {
 
         ImGui::EndTabBar();
       }
+
+      ImGui::End();
+    }
+  }
+
+  void UI::Tilemap1() {
+    if (!ImGui::Begin("Tilemap", &m_ShowTilemap1)) {
+      ImGui::End();
+    } else {
+      auto &texture = Hijo::Get().GetTilemap1Texture();
+      ImGui::Image(reinterpret_cast<ImTextureID>((uint64_t) texture.texture.id),
+                   {static_cast<float>(texture.texture.width), static_cast<float>(texture.texture.height)},
+                   {0, 1}, {1, 0});
 
       ImGui::End();
     }

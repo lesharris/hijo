@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include <functional>
+#include <spdlog/spdlog.h>
 
 #include "common/common.h"
 #include "Instructions.h"

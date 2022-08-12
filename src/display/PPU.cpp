@@ -316,6 +316,7 @@ namespace hijo {
 
     switch (fifo.state) {
       case FetchState::Tile: {
+
         fetchedEntryCount = 0;
 
         if (lcd.LCDC_BGWEnabled()) {
@@ -431,7 +432,6 @@ namespace hijo {
       PipelineFifoReset();
 
       lcd.LCDS_SetMode(LCD::Mode::HBlank);
-
       if (lcd.LCDS_StatInt(LCD::StatSrc::HBlank)) {
         Interrupts::RequestInterrupt(bus.m_Cpu, Interrupts::Interrupt::LCDStat);
       }
@@ -442,6 +442,7 @@ namespace hijo {
     auto &lcd = LCD::Get();
     auto &lcdRegs = lcd.Regs();
     auto &bus = Gameboy::Get();
+
 
     if (lineTicks >= m_TicksPerLine) {
       IncrementLY();
@@ -459,6 +460,9 @@ namespace hijo {
         // Cart save here
       } else {
         lcd.LCDS_SetMode(LCD::Mode::OAM);
+        if (lcd.LCDS_StatInt(LCD::StatSrc::OAM)) {
+          Interrupts::RequestInterrupt(bus.m_Cpu, Interrupts::Interrupt::LCDStat);
+        }
       }
 
       lineTicks = 0;
@@ -468,14 +472,18 @@ namespace hijo {
   void PPU::VBlankMode() {
     auto &lcd = LCD::Get();
     auto &lcdRegs = lcd.Regs();
+    auto &bus = Gameboy::Get();
+
     if (lineTicks >= m_TicksPerLine) {
       IncrementLY();
 
       if (lcdRegs.LY >= m_LinesPerFrame) {
         lcd.LCDS_SetMode(LCD::Mode::OAM);
+        if (lcd.LCDS_StatInt(LCD::StatSrc::OAM)) {
+          Interrupts::RequestInterrupt(bus.m_Cpu, Interrupts::Interrupt::LCDStat);
+        }
         lcdRegs.LY = 0;
         windowLine = 0;
-
         EventManager::Dispatcher().trigger(Events::VBlank{});
       }
 

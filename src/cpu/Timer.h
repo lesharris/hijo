@@ -21,6 +21,10 @@ namespace hijo {
     uint8_t tima;
     uint8_t tma;
     uint8_t tac;
+
+    uint32_t totalClockTicks;
+    bool timaWritten;
+    bool lastTickTime;
   };
 
 } // hijo

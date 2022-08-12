@@ -299,6 +299,10 @@ namespace hijo {
   }
 
   void Gameboy::HandleCPUExecution(const Events::ExecuteCPU &event) {
+
+    if (!event.execute) {
+      m_Cpu.Disassemble(0x0, 0xFFFF);
+    }
     m_Run = event.execute;
   }
 

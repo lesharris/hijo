@@ -35,6 +35,7 @@ namespace hijo {
 
     RenderTexture &GetPackedTileTexture() { return m_PackedTileTexture; }
 
+    RenderTexture &GetTilemap1Texture() { return m_Tilemap1; }
 
     int32_t ScreenWidth() {
       return m_ScreenWidth;
@@ -105,6 +106,7 @@ namespace hijo {
     RenderTexture m_RenderTexture;
     RenderTexture m_TileTexture;
     RenderTexture m_PackedTileTexture;
+    RenderTexture m_Tilemap1;
 
     class System *m_System = nullptr;
   };

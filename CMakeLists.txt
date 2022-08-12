@@ -136,7 +136,7 @@ add_executable(${PROJECT_NAME}
     src/cartridge/mappers/MBC2.cpp
     src/cartridge/mappers/MBC2.h
     src/cartridge/mappers/MBC3.cpp
-    src/cartridge/mappers/MBC3.h)
+    src/cartridge/mappers/MBC3.h src/display/Display.cpp src/display/Display.h)
 
 # Compile Options
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)

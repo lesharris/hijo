@@ -10,6 +10,7 @@
 #include "layers/UI.h"
 
 #include "system/Gameboy.h"
+#include "display/LCD.h"
 
 #include <SDL.h>
 
@@ -40,8 +41,10 @@ namespace hijo {
         layer->Update(m_Timestep);
       }
 
-      auto displayTile = [](uint16_t startLocation, uint16_t tileNum, int x, int y) {
+      auto displayTile = [](uint16_t startLocation, uint16_t tileNum, int x, int y, int scale = 4,
+                            bool useBGPalette = false) {
         auto &gb = Gameboy::Get();
+        auto &lcd = LCD::Get();
 
         std::vector<Color> tileColors{
             WHITE,
@@ -50,6 +53,10 @@ namespace hijo {
             BLACK
         };
 
+        if (useBGPalette) {
+          tileColors = lcd.Regs().bgColors;
+        }
+
         for (int tileY = 0; tileY < 16; tileY += 2) {
           uint8_t b1 = gb.cpuRead(startLocation + (tileNum * 16) + tileY);
           uint8_t b2 = gb.cpuRead(startLocation + (tileNum * 16) + tileY + 1);
@@ -57,12 +64,13 @@ namespace hijo {
           for (int bit = 7; bit >= 0; bit--) {
             uint8_t high = (!!(b1 & (1 << bit))) << 1;
             uint8_t low = !!(b2 & (1 << bit));
-            uint8_t color = high | low;
+            uint8_t color = low | high;
 
-            auto rx = x + ((7 - bit) * 4);
-            auto ry = y + (tileY / 2 * 4);
-            auto w = 4;
-            auto h = 4;
+            auto rx = x + ((7 - bit) * scale);
+            auto ry = y + (tileY / 2 * scale);
+            auto w = scale;
+            auto h = scale;
+
 
             DrawRectangle(rx, ry, w, h, tileColors[color]);
           }
@@ -111,6 +119,32 @@ namespace hijo {
       }
       EndTextureMode();
 
+      BeginTextureMode(m_Tilemap1);
+      ClearBackground(m_DefaultBackground);
+      /* {
+         auto &gb = Gameboy::Get();
+         auto &lcd = LCD::Get();
+         //float scrollX = lcd.Regs().SCRX;
+         // float scrollY = lcd.Regs().SCRY;
+         uint16_t mapAddr = 0x9800;
+         uint16_t addr = lcd.LCDC_BGWTileDataArea();
+         bool altAddressing = addr == 0x8800;
+         int xDraw = 0;
+         int yDraw = 0;
+
+         for (int y = 0; y < 32; y++) {
+           for (int x = 0; x < 32; x++) {
+             uint8_t tileNum = gb.cpuRead(mapAddr++) + (altAddressing * 128);
+             displayTile(addr, tileNum, xDraw, yDraw, 2, false);
+             xDraw += (8 * 2);
+           }
+
+           yDraw += (8 * 2);
+           xDraw = 0;
+         }
+       }*/
+      EndTextureMode();
+
       BeginDrawing();
 
       for (const auto &layer: *m_GameLayers) {
@@ -118,7 +152,6 @@ namespace hijo {
       }
 
       ClearBackground(m_DefaultBackground);
-
 
       for (auto layer: *m_GameLayers) {
         if (!layer->RenderTarget())
@@ -171,6 +204,12 @@ namespace hijo {
     m_PackedTileTexture = LoadRenderTexture(32 * 16, 32 * 24);
     SetTextureFilter(m_PackedTileTexture.texture, TEXTURE_FILTER_POINT);
 
+    m_Tilemap1 = LoadRenderTexture(32 * 16, 32 * 16);
+    SetTextureFilter(m_Tilemap1.texture, TEXTURE_FILTER_POINT);
+
+    // m_Tilemap2 = LoadRenderTexture(32 * 16, 32 * 16);
+    // SetTextureFilter(m_Tilemap2.texture, TEXTURE_FILTER_POINT);
+
     SDL_Init(SDL_INIT_AUDIO);
 
     EventManager::Get().Attach<
@@ -202,6 +241,9 @@ namespace hijo {
     UnloadRenderTexture(m_RenderTexture);
     UnloadRenderTexture(m_TileTexture);
     UnloadRenderTexture(m_PackedTileTexture);
+    UnloadRenderTexture(m_Tilemap1);
+    // UnloadRenderTexture(m_Tilemap2);
+
     SDL_Quit();
     CloseWindow();
   }

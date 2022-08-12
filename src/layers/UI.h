@@ -42,6 +42,8 @@ namespace hijo {
 
     void Tiles();
 
+    void Tilemap1();
+
     void OAM();
 
     void CartridgeInfo();
@@ -74,6 +76,7 @@ namespace hijo {
     bool m_ShowPPU = true;
     bool m_ShowCartridge = true;
     bool m_ShowCartridgeRuntime = true;
+    bool m_ShowTilemap1 = true;
 
     ImVec2 m_PreviousWindowSize{0, 0};
     ImVec2 m_PreviousMousePosition{0, 0};
